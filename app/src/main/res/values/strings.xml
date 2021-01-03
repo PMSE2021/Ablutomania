@@ -4,6 +4,7 @@
     This string is used for square devices and overridden by hello_world in
     values-round/strings.xml for round devices.
     -->
+    <string name="title_activity_hand_select">HandSelectActivity</string>
     <string name="hand_select">On which side \nare you wearing \nyour watch?</string>
     <string name="btn_left_hand">Left</string>
     <string name="btn_right_hand">Right</string>

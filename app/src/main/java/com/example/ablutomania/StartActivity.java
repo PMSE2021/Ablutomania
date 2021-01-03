@@ -1,12 +1,12 @@
 package com.example.ablutomania;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.wearable.activity.WearableActivity;
 import android.view.View;
 import android.widget.Button;
 
-public class StartActivity extends WearableActivity {
+public class StartActivity extends Activity {
 
     private static final String TAG = "Ablutomania Log";
 
@@ -17,9 +17,6 @@ public class StartActivity extends WearableActivity {
 
         StartButton();
         ExitButton();
-
-        // Enables Always-on
-        setAmbientEnabled();
     }
     private void StartButton(){
         //Button to enter menu
@@ -28,7 +25,7 @@ public class StartActivity extends WearableActivity {
             @Override
             public void onClick(View v) {
                 //Toast.makeText(StartActivity.this, "Let's start", Toast.LENGTH_SHORT).show();
-                startActivity(new Intent(StartActivity.this, MainActivity.class));
+                startActivity(new Intent(StartActivity.this, HandSelectActivity.class));
             }
         });
 
