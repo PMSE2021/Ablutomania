@@ -4,30 +4,48 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/dark_grey"
+    android:background="#292929"
     android:padding="@dimen/box_inset_layout_padding"
     android:translationX="0dp"
     android:translationY="0dp"
     tools:context=".MainActivity"
     tools:deviceIds="wear">
 
-    <FrameLayout
+    <Button
+        android:id="@+id/btn_right_hand"
+        android:layout_width="120dp"
+        android:layout_height="60dp"
+        android:text="@string/btn_right_hand"
+        android:textSize="24sp"
+        android:translationX="105dp"
+        android:translationY="100dp" />
+
+    <Button
+        android:id="@+id/btn_left_hand"
+        android:layout_width="110dp"
+        android:layout_height="60dp"
+        android:text="@string/btn_left_hand"
+        android:textSize="24sp"
+        android:translationX="-5dp"
+        android:translationY="100dp" />
+
+    <TextView
+        android:id="@+id/text_hand_select"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:padding="@dimen/inner_frame_layout_padding"
-        android:translationX="0dp"
-        android:translationY="0dp"
-        app:boxedEdges="all"
-        tools:ignore="MissingPrefix">
+        android:layout_height="90dp"
+        android:text="@string/hand_select"
+        android:textAlignment="center"
+        android:textSize="20sp"
+        android:translationY="25dp"/>
 
-        <TextView
-            android:id="@+id/text"
-            android:layout_width="wrap_content"
-            android:layout_height="90dp"
-            android:text="@string/hello_world"
-            android:textSize="24sp" />
-
-    </FrameLayout>
+    <Button
+        android:id="@+id/btn_back_start"
+        android:layout_width="match_parent"
+        android:layout_height="70dp"
+        android:text="@string/btn_back_start"
+        android:textSize="24sp"
+        android:translationY="155dp"
+        android:gravity="center_horizontal|top"/>
 
 
 </androidx.wear.widget.BoxInsetLayout>
