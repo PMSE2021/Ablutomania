@@ -6,4 +6,5 @@
     <string name="btn_start_application">START</string>
     <string name="btn_back_start">BACK</string>
     <string name="hello_world">Hello Round World!</string>
+    <string name="btn_back_main">BACK</string>
 </resources>

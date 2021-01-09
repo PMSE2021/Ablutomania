@@ -13,6 +13,7 @@
     <string name="btn_start_application">START</string>
     <string name="btn_back_start">BACK</string>
     <string name="title_activity_test">TestActivity</string>
+    <string name="btn_back_main">BACK</string>
     <!--
     This string is used for square devices and overridden by hello_world in
     values-round/strings.xml for round devices.
