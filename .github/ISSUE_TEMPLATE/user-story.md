@@ -16,5 +16,7 @@ assignees: ''
 **When** 
 
 ### Additional Comments
+None
 
 ### Backlog Refinement Notes
+None
