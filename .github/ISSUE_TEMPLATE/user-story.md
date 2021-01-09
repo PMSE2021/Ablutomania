@@ -8,12 +8,12 @@ assignees: ''
 ---
 
 ### User Story
-**As a** 
-**I want** 
-**So that**
+**As:** 
+**I want:** 
+**So that:**
 
 ### Acceptance Criteria
-**When** 
+**When:** 
 
 ### Additional Comments
 None
