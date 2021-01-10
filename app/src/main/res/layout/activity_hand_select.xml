@@ -5,46 +5,63 @@
     android:layout_height="match_parent"
     android:background="#292929"
     android:padding="@dimen/box_inset_layout_padding"
-    android:translationX="0dp"
-    android:translationY="0dp"
     tools:context=".HandSelectActivity"
     tools:deviceIds="wear">
 
-    <Button
-        android:id="@+id/btn_right_hand"
-        android:layout_width="120dp"
-        android:layout_height="60dp"
-        android:text="@string/btn_right_hand"
-        android:textSize="24sp"
-        android:translationX="105dp"
-        android:translationY="100dp" />
-
-    <Button
-        android:id="@+id/btn_left_hand"
-        android:layout_width="110dp"
-        android:layout_height="60dp"
-        android:text="@string/btn_left_hand"
-        android:textSize="24sp"
-        android:translationX="-5dp"
-        android:translationY="100dp" />
-
-    <TextView
-        android:id="@+id/text_hand_select"
+    <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="90dp"
-        android:text="@string/hand_select"
-        android:textAlignment="center"
-        android:textSize="20sp"
-        android:translationY="25dp"/>
+        android:layout_height="match_parent">
 
-    <Button
-        android:id="@+id/btn_back_start"
-        android:layout_width="match_parent"
-        android:layout_height="70dp"
-        android:text="@string/btn_back_start"
-        android:textSize="24sp"
-        android:translationY="155dp"
-        android:gravity="center_horizontal|top"/>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_above="@+id/btn_back_start">
+
+            <Button
+                android:id="@+id/btn_left_hand"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:layout_weight="0.5"
+                android:text="@string/btn_left_hand"
+                android:textSize="24sp"
+                tools:ignore="ButtonStyle"
+                />
+
+            <Button
+                android:id="@+id/btn_right_hand"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="start"
+                android:layout_weight="0.5"
+                android:text="@string/btn_right_hand"
+                android:textSize="24sp"
+                tools:ignore="ButtonStyle" />
+
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/text_hand_select"
+            android:layout_width="match_parent"
+            android:layout_height="90dp"
+            android:paddingTop="@dimen/screen_percentage_10"
+            android:text="@string/hand_select"
+            android:textAlignment="center"
+            android:textSize="20sp" />
+
+        <Button
+            android:id="@+id/btn_back_start"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:gravity="center_horizontal"
+            android:text="@string/btn_back_start"
+            android:textSize="24sp" />
+
+
+    </RelativeLayout>
 
 
 </androidx.wear.widget.BoxInsetLayout>
