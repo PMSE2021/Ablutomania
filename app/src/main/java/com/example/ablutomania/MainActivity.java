@@ -7,6 +7,8 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 
 import java.util.Locale;
@@ -47,6 +49,8 @@ public class MainActivity extends Activity implements SensorEventListener {
         mSensorManager.registerListener(this, mMagnetometerSensor,  SensorManager.SENSOR_DELAY_NORMAL);
         mSensorManager.registerListener(this, mPressureSensor,      SensorManager.SENSOR_DELAY_NORMAL);
         mSensorManager.registerListener(this, mLightSensor,         SensorManager.SENSOR_DELAY_NORMAL);
+
+        BackButton();
     }
 
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
@@ -87,4 +91,16 @@ public class MainActivity extends Activity implements SensorEventListener {
         else
             Log.d(TAG, "Unknown sensor type");
     }
+
+    private void BackButton(){
+        // back to hand select activity
+        Button btn_back_main = findViewById(R.id.btn_back_main);
+        btn_back_main.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                finish();
+            }
+        });
+    }
+
 }

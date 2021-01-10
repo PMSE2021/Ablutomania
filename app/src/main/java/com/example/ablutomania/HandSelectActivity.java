@@ -30,8 +30,8 @@ public class HandSelectActivity extends Activity {
             @Override
             public void onClick(View v) {
                 Log.i(TAG, "CLicked on button left hand");
-                Toast.makeText(HandSelectActivity.this, "Left hand selected", Toast.LENGTH_SHORT).show();
-                startActivity(new Intent(HandSelectActivity.this, MainActivity.class));
+                Toast.makeText(HandSelectActivity.this, "App supports right hand only! Please wear your watch on the right wrist", Toast.LENGTH_LONG).show();
+
             }
         });
     }
@@ -42,7 +42,8 @@ public class HandSelectActivity extends Activity {
             @Override
             public void onClick(View v) {
                 Log.i(TAG, "CLicked on button right hand");
-                Toast.makeText(HandSelectActivity.this, "App support left hand only! Please wear your watch on the left wrist", Toast.LENGTH_LONG).show();
+                Toast.makeText(HandSelectActivity.this, "Right hand selected", Toast.LENGTH_SHORT).show();
+                startActivity(new Intent(HandSelectActivity.this, MainActivity.class));
             }
         });
     }
