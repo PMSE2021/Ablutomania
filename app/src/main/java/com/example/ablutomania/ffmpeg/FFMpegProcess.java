@@ -263,7 +263,7 @@ public class FFMpegProcess {
             inputopts.add("async:file:"+f.getAbsolutePath());
 
             /* create named pipe */
-            (void)f.delete();
+            f.delete();
             Process p = new ProcessBuilder().command("mknod", f.getAbsolutePath(), "p").start();
             int result = p.waitFor();
 
