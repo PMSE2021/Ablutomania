@@ -54,20 +54,6 @@
                     android:layout_below="@+id/gyroscope"
                     android:layout_marginBottom="@dimen/screen_percentage_05" />
 
-                <TextView
-                    android:id="@+id/pressuresensor"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_below="@+id/magnetometer"
-                    android:layout_marginBottom="@dimen/screen_percentage_05" />
-
-                <TextView
-                    android:id="@+id/lightsensor"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_below="@+id/pressuresensor"
-                    android:layout_marginBottom="@dimen/screen_percentage_05" />
-
             </RelativeLayout>
         </ScrollView>
 
