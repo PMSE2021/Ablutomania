@@ -74,7 +74,7 @@ public class RecorderService extends Service {
         df.setTimeZone(tz);
         String aid = Settings.Secure.getString(context.getContentResolver(),
                 Settings.Secure.ANDROID_ID);
-        return df.format(new Date()) + "_" + aid + ".mkv";
+        return df.format(new Date()) + "_Ablutomania_" + aid + ".mkv";
     }
 
     @Override
