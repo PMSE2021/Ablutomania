@@ -294,7 +294,7 @@ public class FFMpegProcess {
                           "file:"+output : output;
             this.output_fmt = format;
 
-            Log.e("OUT", output + output_fmt);
+            Log.e("Ablutomania OUT", output + output_fmt);
             return this;
         }
 
