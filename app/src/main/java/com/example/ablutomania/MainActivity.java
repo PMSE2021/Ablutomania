@@ -12,6 +12,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import org.tensorflow.lite.Interpreter;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -32,6 +33,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     private TextView mTextViewAccelerometer;
     private TextView mTextViewGyroscope;
     private TextView mTextViewMagnetometer;
+    Interpreter tflite;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -42,6 +44,14 @@ public class MainActivity extends Activity implements SensorEventListener {
         mTextViewAccelerometer  = findViewById(R.id.accelerometer);
         mTextViewGyroscope      = findViewById(R.id.gyroscope);
         mTextViewMagnetometer   = findViewById(R.id.magnetometer);
+
+        /* For next Story...
+        // Create the tflite object, loaded from the model file
+        try {
+            tflite = new Interpreter(loadModelFile());
+        } catch (Exception ex){
+            ex.printStackTrace();
+        }*/
 
         SensorManager mSensorManager    = ((SensorManager)getSystemService(SENSOR_SERVICE));
         Sensor mRotationSensor          = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
