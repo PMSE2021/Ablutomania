@@ -1,5 +1,6 @@
 package com.example.ablutomania.bgrecorder;
 
+import android.app.Notification;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -16,6 +17,8 @@ import android.os.IBinder;
 import android.provider.Settings;
 import android.util.Log;
 
+import com.example.ablutomania.CustomNotification;
+import com.example.ablutomania.R;
 import com.example.ablutomania.ffmpeg.FFMpegProcess;
 
 import java.io.File;
@@ -41,14 +44,13 @@ public class RecorderService extends Service {
     private static final String TAG = "RecorderService";
     private String VERSION = "1.21";
     private FFMpegProcess mFFmpeg;
-    private int NOTIFICATION_ID = 0x007;
 
     public static final String ACTION_STOP = "ACTION_STOP";
     public static final String ACTION_STRT = "ACTION_STRT";
     private LinkedList<CopyListener> mSensorListeners = new LinkedList<>();
 
     /* for start synchronization */
-    private Long mStartTimeNS = -1l;
+    private Long mStartTimeNS = -1L;
     private CountDownLatch mSyncLatch = null;
 
     @Override
@@ -86,29 +88,84 @@ public class RecorderService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
 
-        try {
-            startRecording();
+        Log.d("bgrec", "onStart: " + intent.toString() + " ffmpeg " + mFFmpeg);
 
-            /*
-             * monitor the starting status and update the notification once the recording
-             * is started.
-             */
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        mSyncLatch.await();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+        /*
+         * start the recording process if there is no ffmpeg instance yet, and no stop intent
+         * was sent. When starting a recording, the mSyncLatch variable is initialized!
+         */
+        boolean doStopRecording = intent != null && ACTION_STOP.equals(intent.getAction()),
+                doStartRecording = mFFmpeg == null && !isConnected(this);
+
+        /*
+         * start the service in foreground mode, so Android won't kill it when running in
+         * background. Do this before actually starting the service to not delay the UI while
+         * the service is being started.
+         */
+        startForeground(CustomNotification.NOTIFICATION_ID, notify(!doStopRecording && doStartRecording));
+
+        if (doStopRecording) {
+            stopRecording();
+        }
+        else if (doStartRecording) {
+            try {
+                startRecording();
+
+                /*
+                 * monitor the starting status and update the notification once the recording
+                 * is started.
+                 */
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            mSyncLatch.await();
+                            RecorderService.this.notify(false);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
                     }
-                }
-            }).start();
+                }).start();
 
-        } catch (Exception e) {
-            Log.e(TAG, Log.getStackTraceString(e));
+            } catch (Exception e) {
+                Log.e(TAG, Log.getStackTraceString(e));
+            }
         }
 
         return START_STICKY;
+    }
+
+
+    private Notification notify(boolean ispreparing) {
+        /*
+         * directly update the notification text, when background recording started/stopped
+         * by the system.
+         */
+        String contentText = getString(
+                        ispreparing ?
+                                R.string.notification_recording_preping :
+                        mFFmpeg != null ?
+                        mSyncLatch != null && mSyncLatch.getCount() == 0 ?
+                                R.string.notification_recording_ongoing :
+                                R.string.notification_recording_preping :
+                                R.string.notification_recording_paused);
+
+        return CustomNotification.updateNotification(RecorderService.this, CHANID, contentText);
+    }
+
+
+    public static boolean isConnected(Context context) {
+        return false;
+
+        /* TODO */
+        //Intent intent = context.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        //int plugged = intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1);
+        //return plugged == BatteryManager.BATTERY_PLUGGED_AC || plugged == BatteryManager.BATTERY_PLUGGED_USB;
+    }
+
+    @Override
+    public void onDestroy() {
+        stopRecording();
     }
 
     public void startRecording() throws Exception {
@@ -118,7 +175,7 @@ public class RecorderService extends Service {
                         getContentResolver(), Settings.Secure.ANDROID_ID),
                 format = ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN ? "f32le" : "f32be";
 
-        /**
+        /*
          *  Try to record this list of sensors. We go through this list and get them as wakeup
          *  sensors first. Terminate if there is no wakeup supported (otherwise a wake-lock would
          *  be required). Then get all sensors as non-wakeups and select only those that are there.
@@ -153,9 +210,7 @@ public class RecorderService extends Service {
             Log.d("bgrecorder", String.format("recording %s %s",
                     s.isWakeUpSensor() ? "wakeup" : "", s.getName()));
 
-        CopyListener[] listeners = new CopyListener[sensors.size()];
-
-        /**
+        /*
          * build and start the ffmpeg process, which transcodes into a matroska file.
          */
         FFMpegProcess.Builder b = new FFMpegProcess.Builder(getApplicationContext())
@@ -176,7 +231,7 @@ public class RecorderService extends Service {
 
         mFFmpeg = b.build();
 
-        /**
+        /*
          * for each sensor there is thread that copies data to the ffmpeg process. For startup
          * synchronization the threads are blocked until the starttime has been set at which
          * point the threadlock will be released.
@@ -214,7 +269,7 @@ public class RecorderService extends Service {
     public void stopRecording() {
         if (mFFmpeg != null) {
             try {
-                /** if stuck in preparing state */
+                /* if stuck in preparing state */
                 for (int i=0; i < mSyncLatch.getCount(); i++)
                     mSyncLatch.countDown();
 
@@ -269,9 +324,9 @@ public class RecorderService extends Service {
         private boolean mFlushCompleted = false;
 
         /**
-         * @param i
-         * @param rate
-         * @param name
+         * @param i     index
+         * @param rate  frequency in Hz
+         * @param name  name
          */
         public CopyListener(int i, double rate, String name) {
             index = i;

@@ -2,22 +2,17 @@ package com.example.ablutomania;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import org.tensorflow.lite.Interpreter;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 
 import com.example.ablutomania.bgrecorder.RecorderService;
 
@@ -26,8 +21,6 @@ import java.util.Locale;
 public class MainActivity extends Activity implements SensorEventListener {
 
     private static final String TAG = MainActivity.class.getName();
-    private static final String EXT_STORAGE = android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
-    private static final int PERMISSION_REQUEST_ID = 0xeffe;
 
     private TextView mTextViewRotationVector;
     private TextView mTextViewAccelerometer;
@@ -66,18 +59,10 @@ public class MainActivity extends Activity implements SensorEventListener {
 
         BackButton();
 
-        /* ask for runtime permission to save file on sdcard */
-        if (!allowed(EXT_STORAGE))
-            reqPerm(EXT_STORAGE);
-        else {
-            Intent intent = new Intent(this, RecorderService.class);
-            startService(intent);
-        }
+        startService( new Intent(this, RecorderService.class) );
     }
 
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-        Log.d(TAG, "onAccuracyChanged - accuracy: " + accuracy);
-    }
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {}
 
     public void onSensorChanged(SensorEvent event) {
         if (event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR) {
@@ -107,27 +92,5 @@ public class MainActivity extends Activity implements SensorEventListener {
                 finish();
             }
         });
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        if (requestCode != PERMISSION_REQUEST_ID)
-            return;
-
-        if (grantResults[0] != PackageManager.PERMISSION_GRANTED)
-            return;
-
-        startService(new Intent(this, RecorderService.class));
-    }
-
-    private boolean allowed(String perm) {
-        return ContextCompat.checkSelfPermission(this,perm)
-                == PackageManager.PERMISSION_GRANTED;
-    }
-
-    private void reqPerm(String perm) {
-        ActivityCompat.requestPermissions(this,
-                new String[]{perm},
-                PERMISSION_REQUEST_ID);
     }
 }
