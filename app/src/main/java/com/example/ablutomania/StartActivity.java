@@ -3,12 +3,13 @@ package com.example.ablutomania;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 
 public class StartActivity extends Activity {
 
-    private static final String TAG = "Ablutomania Log";
+    private static final String TAG = "Ablutomaina Log";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -25,6 +26,7 @@ public class StartActivity extends Activity {
             @Override
             public void onClick(View v) {
                 //Toast.makeText(StartActivity.this, "Let's start", Toast.LENGTH_SHORT).show();
+                Log.i(TAG, "Clicked on start button");
                 startActivity(new Intent(StartActivity.this, HandSelectActivity.class));
             }
         });
@@ -36,6 +38,7 @@ public class StartActivity extends Activity {
         btn_exit_application.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Log.i(TAG, "Clicked on exit button");
                 finish();
             }
         });
