@@ -2,6 +2,7 @@ package com.example.ablutomania;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.res.AssetFileDescriptor;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -16,6 +17,10 @@ import androidx.annotation.Nullable;
 
 import com.example.ablutomania.bgrecorder.RecorderService;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.Locale;
 
 public class MainActivity extends Activity implements SensorEventListener {
@@ -33,18 +38,20 @@ public class MainActivity extends Activity implements SensorEventListener {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mTextViewRotationVector = findViewById(R.id.rotationvector);
-        mTextViewAccelerometer  = findViewById(R.id.accelerometer);
-        mTextViewGyroscope      = findViewById(R.id.gyroscope);
-        mTextViewMagnetometer   = findViewById(R.id.magnetometer);
 
-        /* For next Story...
         // Create the tflite object, loaded from the model file
         try {
             tflite = new Interpreter(loadModelFile());
         } catch (Exception ex){
             ex.printStackTrace();
-        }*/
+        }
+
+        mTextViewRotationVector = findViewById(R.id.rotationvector);
+        mTextViewAccelerometer  = findViewById(R.id.accelerometer);
+        mTextViewGyroscope      = findViewById(R.id.gyroscope);
+        mTextViewMagnetometer   = findViewById(R.id.magnetometer);
+
+
 
         SensorManager mSensorManager    = ((SensorManager)getSystemService(SENSOR_SERVICE));
         Sensor mRotationSensor          = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
@@ -93,4 +100,31 @@ public class MainActivity extends Activity implements SensorEventListener {
             }
         });
     }
+
+    public float doInference(String inputString) {
+        //Input shape is ???
+        float[] inputVal = new float[1];
+        inputVal[0] = Float.valueOf(inputString);
+
+        //Output shape is [1][3]
+        float[][] outputval = new float[1][3];
+
+        // Run interference passing the input shape & getting the output shape
+        tflite.run(inputVal, outputval);
+        // Inferred value is at [0][0]
+        float inferredValue = outputval[0][0];
+
+        return inferredValue;
+
+    }
+
+    private MappedByteBuffer loadModelFile() throws IOException {
+        AssetFileDescriptor fileDescriptor = this.getAssets().openFd("CNN_model_ablutomania-20-1 IH.tflite");
+        FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
+        FileChannel fileChannel = inputStream.getChannel();
+        long startOffset = fileDescriptor.getDeclaredLength();
+        long declaredLength = fileDescriptor.getDeclaredLength();
+        return fileChannel.map(FileChannel.MapMode.READ_ONLY,startOffset,declaredLength);
+    }
 }
+
