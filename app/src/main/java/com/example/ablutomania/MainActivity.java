@@ -11,7 +11,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
-import org.tensorflow.lite.Interpreter;
+//import org.tensorflow.lite.Interpreter;
 
 import androidx.annotation.Nullable;
 
@@ -31,20 +31,20 @@ public class MainActivity extends Activity implements SensorEventListener {
     private TextView mTextViewAccelerometer;
     private TextView mTextViewGyroscope;
     private TextView mTextViewMagnetometer;
-    Interpreter tflite;
+   // Interpreter tflite;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-
+/*
         // Create the tflite object, loaded from the model file
         try {
             tflite = new Interpreter(loadModelFile());
         } catch (Exception ex){
             ex.printStackTrace();
-        }
+        }*/
 
         mTextViewRotationVector = findViewById(R.id.rotationvector);
         mTextViewAccelerometer  = findViewById(R.id.accelerometer);
@@ -100,7 +100,7 @@ public class MainActivity extends Activity implements SensorEventListener {
             }
         });
     }
-
+/*
     public float doInference(String inputString) {
         //Input shape is ???
         float[] inputVal = new float[1];
@@ -125,6 +125,6 @@ public class MainActivity extends Activity implements SensorEventListener {
         long startOffset = fileDescriptor.getDeclaredLength();
         long declaredLength = fileDescriptor.getDeclaredLength();
         return fileChannel.map(FileChannel.MapMode.READ_ONLY,startOffset,declaredLength);
-    }
+    }*/
 }
 
