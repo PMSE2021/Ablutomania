@@ -4,11 +4,17 @@ import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.res.AssetFileDescriptor;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import org.tensorflow.lite.Interpreter;
 
 import androidx.annotation.Nullable;
 
@@ -16,6 +22,11 @@ import com.example.ablutomania.bgrecorder.RecorderService;
 
 import static com.example.ablutomania.bgrecorder.RecorderService.RecorderServiceListener;
 import static com.example.ablutomania.bgrecorder.RecorderService.State;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.Locale;
 
 public class MainActivity extends Activity implements RecorderServiceListener {
 
@@ -28,6 +39,8 @@ public class MainActivity extends Activity implements RecorderServiceListener {
     private boolean mIsBound;
 
     private static Intent intentRecorder = null;
+
+    Interpreter tflite;
 
     private ServiceConnection mConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName className, IBinder service) {
@@ -58,9 +71,23 @@ public class MainActivity extends Activity implements RecorderServiceListener {
         btnCtlRecorder = findViewById(R.id.btnCtlRecorder);
         mProgressBarText = findViewById(R.id.textStatusRecorder);
 
+        // Create the tflite object, loaded from the model file
+        try {
+            tflite = new Interpreter(loadModelFile());
+        } catch (Exception ex){
+            ex.printStackTrace();
+        }
+
         if(intentRecorder == null) {
             intentRecorder = new Intent(this, RecorderService.class);
         }
+
+
+        SensorManager mSensorManager    = ((SensorManager)getSystemService(SENSOR_SERVICE));
+        Sensor mRotationSensor          = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+        Sensor mAccelerometerSensor     = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        Sensor mGyroscopeSensor         = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
+        Sensor mMagnetometerSensor      = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
 
         if(!mIsBound) { doBindService(); }
 
@@ -148,4 +175,31 @@ public class MainActivity extends Activity implements RecorderServiceListener {
             e.printStackTrace();
         }
     }
+
+    public float doInference(String inputString) {
+        //Input shape is ???
+        float[] inputVal = new float[1];
+        inputVal[0] = Float.valueOf(inputString);
+
+        //Output shape is [1][3]
+        float[][] outputval = new float[1][3];
+
+        // Run interference passing the input shape & getting the output shape
+        tflite.run(inputVal, outputval);
+        // Inferred value is at [0][0]
+        float inferredValue = outputval[0][0];
+
+        return inferredValue;
+
+    }
+
+    private MappedByteBuffer loadModelFile() throws IOException {
+        AssetFileDescriptor fileDescriptor = this.getAssets().openFd("CNN_model_ablutomania-20-1 IH.tflite");
+        FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
+        FileChannel fileChannel = inputStream.getChannel();
+        long startOffset = fileDescriptor.getDeclaredLength();
+        long declaredLength = fileDescriptor.getDeclaredLength();
+        return fileChannel.map(FileChannel.MapMode.READ_ONLY,startOffset,declaredLength);
+    }
 }
+
