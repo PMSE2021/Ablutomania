@@ -1,5 +1,6 @@
 package com.example.ablutomania.bgrecorder;
 
+import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.Service;
 import android.content.Context;
@@ -9,6 +10,7 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorEventListener2;
 import android.hardware.SensorManager;
+import android.os.Binder;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
@@ -42,20 +44,29 @@ public class RecorderService extends Service {
     private static final double RATE = 50.;
     private static final String CHANID = "RecorderServiceNotification";
     private static final String TAG = "RecorderService";
-    private String VERSION = "1.21";
+    private static final String VERSION = "1.21";
+    private final IBinder mBinder = new LocalBinder();
     private FFMpegProcess mFFmpeg;
 
     public static final String ACTION_STOP = "ACTION_STOP";
     public static final String ACTION_STRT = "ACTION_STRT";
-    private LinkedList<CopyListener> mSensorListeners = new LinkedList<>();
+    private final LinkedList<CopyListener> mSensorListeners = new LinkedList<>();
+    private static LinkedList<RecorderServiceListener> mListeners = new LinkedList<>();
 
     /* for start synchronization */
     private Long mStartTimeNS = -1L;
     private CountDownLatch mSyncLatch = null;
+    private State eState = State.IDLE;
+
+    public enum State {
+        IDLE,
+        PREPARING,
+        RECORDING
+    }
 
     @Override
     public IBinder onBind(Intent intent) {
-        return null;
+        return mBinder;
     }
 
     public static String getCurrentDateAsIso() {
@@ -74,14 +85,34 @@ public class RecorderService extends Service {
         TimeZone tz = TimeZone.getTimeZone("UTC");
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mmZ");
         df.setTimeZone(tz);
-        String aid = Settings.Secure.getString(context.getContentResolver(),
+        @SuppressLint("HardwareIds") String aid = Settings.Secure.getString(context.getContentResolver(),
                 Settings.Secure.ANDROID_ID);
         return df.format(new Date()) + "_Ablutomania_" + aid + ".mkv";
+    }
+
+    public State getState() {
+        return eState;
+    }
+
+    public void setListener(RecorderServiceListener listener) {
+        if(!mListeners.contains(listener)) {
+            mListeners.add(listener);
+        }
+    }
+
+    public void removeListener(RecorderServiceListener listener) {
+        mListeners.remove(listener);
     }
 
     @Override
     public void onCreate()  {
         super.onCreate();
+    }
+
+    public class LocalBinder extends Binder {
+        public RecorderService getService() {
+            return RecorderService.this;
+        }
     }
 
     @Override
@@ -141,16 +172,30 @@ public class RecorderService extends Service {
          * directly update the notification text, when background recording started/stopped
          * by the system.
          */
-        String contentText = getString(
-                        ispreparing ?
-                                R.string.notification_recording_preping :
-                        mFFmpeg != null ?
-                        mSyncLatch != null && mSyncLatch.getCount() == 0 ?
-                                R.string.notification_recording_ongoing :
-                                R.string.notification_recording_preping :
-                                R.string.notification_recording_paused);
+        final String[] notifyContent = {
+                getString(R.string.notification_recording_paused),  // IDLE
+                getString(R.string.notification_recording_preping), // PREPARING
+                getString(R.string.notification_recording_ongoing)  // RECORDING
+        };
 
-        return CustomNotification.updateNotification(RecorderService.this, CHANID, contentText);
+        if(ispreparing) {
+            eState = State.PREPARING;
+        } else if(mFFmpeg != null) {
+            if (mSyncLatch != null && mSyncLatch.getCount() == 0) {
+                eState = State.RECORDING;
+            } else {
+                eState = State.PREPARING;
+            }
+        }
+        else {
+            eState = State.IDLE;
+        }
+
+        for(RecorderServiceListener listener : mListeners) {
+            listener.onStateChanged(eState);
+        }
+
+        return CustomNotification.updateNotification(RecorderService.this, CHANID, notifyContent[eState.ordinal()]);
     }
 
 
@@ -169,7 +214,7 @@ public class RecorderService extends Service {
     }
 
     public void startRecording() throws Exception {
-        String platform = Build.BOARD + " " + Build.DEVICE + " " + Build.VERSION.SDK_INT,
+        @SuppressLint("HardwareIds") String platform = Build.BOARD + " " + Build.DEVICE + " " + Build.VERSION.SDK_INT,
                 output = getDefaultOutputPath(getApplicationContext()),
                 android_id = Settings.Secure.getString(
                         getContentResolver(), Settings.Secure.ANDROID_ID),
@@ -265,7 +310,6 @@ public class RecorderService extends Service {
         }
     }
 
-
     public void stopRecording() {
         if (mFFmpeg != null) {
             try {
@@ -285,6 +329,7 @@ public class RecorderService extends Service {
         }
 
         mFFmpeg = null;
+        notify(false);
     }
 
     private int getNumChannels(Sensor s) throws Exception {
@@ -309,6 +354,11 @@ public class RecorderService extends Service {
             default:
                 throw new Exception("unknown number of channels for " + s.getName());
         }
+    }
+
+    public interface RecorderServiceListener {
+        // function to notify listeners on stated changed
+        void onStateChanged(State state);
     }
 
     private class CopyListener implements SensorEventListener, SensorEventListener2 {

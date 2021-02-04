@@ -14,6 +14,8 @@
     <string name="btn_back_start">BACK</string>
     <string name="title_activity_test">TestActivity</string>
     <string name="btn_back_main">BACK</string>
+    <string name="btn_set_recorder_start">START</string>
+    <string name="btn_set_recorder_stop">STOP</string>
 
     <!-- Notifications for background recording -->
     <string name="notification_title">Ablutomania</string>

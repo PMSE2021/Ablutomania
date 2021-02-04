@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.wear.widget.BoxInsetLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -10,64 +9,38 @@
     tools:deviceIds="wear">
 
     <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:orientation="vertical"
+        android:weightSum="100">
 
-        <ScrollView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            app:boxedEdges="all"
-            tools:ignore="MissingPrefix">
+        <Button
+            android:id="@+id/btnCtlRecorder"
+            android:layout_width="fill_parent"
+            android:layout_height="0dp"
+            android:layout_weight="23"
+            android:gravity="center_horizontal|top"
+            android:textSize="24sp" />
 
-            <RelativeLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:padding="@dimen/screen_percentage_15">
-
-                <TextView
-                    android:id="@+id/rotationvector"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="@dimen/screen_percentage_05" />
-
-                <TextView
-                    android:id="@+id/accelerometer"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_below="@+id/rotationvector"
-                    android:layout_marginBottom="@dimen/screen_percentage_05" />
-
-                <TextView
-                    android:id="@+id/gyroscope"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_below="@+id/accelerometer"
-                    android:layout_marginBottom="@dimen/screen_percentage_05" />
-
-                <TextView
-                    android:id="@+id/magnetometer"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_below="@+id/gyroscope"
-                    android:layout_marginBottom="@dimen/screen_percentage_05" />
-
-            </RelativeLayout>
-        </ScrollView>
+        <TextView
+            android:id="@+id/textStatusRecorder"
+            android:layout_width="fill_parent"
+            android:layout_height="0dp"
+            android:layout_weight="54"
+            android:gravity="center"
+            android:layout_gravity="center"
+            android:textSize="@dimen/screen_percentage_10" />
 
         <Button
             android:id="@+id/btn_back_main"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_weight="3"
-            android:gravity="center_horizontal|top"
+            android:layout_width="fill_parent"
+            android:layout_height="0dp"
+            android:layout_weight="23"
+            android:gravity="center_horizontal|bottom"
             android:text="@string/btn_back_main"
-            android:textSize="24sp"
-
-
-            />
+            android:textSize="24sp" />
     </LinearLayout>
 
 </androidx.wear.widget.BoxInsetLayout>
