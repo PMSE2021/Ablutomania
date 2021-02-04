@@ -23,12 +23,12 @@ android {
     }
 
     aaptOptions{
-noCompress "tflite"
+        noCompress "tflite"
     }
+//    buildFeatures {
+//        mlModelBinding true
+//    }
 
-    buildFeatures {
-        mlModelBinding true
-    }
 }
 
 

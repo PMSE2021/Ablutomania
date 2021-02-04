@@ -4,8 +4,6 @@ import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.hardware.Sensor;
-import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.view.View;
@@ -16,19 +14,16 @@ import androidx.annotation.Nullable;
 
 import com.example.ablutomania.bgrecorder.RecorderService;
 
-import static com.example.ablutomania.bgrecorder.RecorderService.RecorderServiceListener;
-import static com.example.ablutomania.bgrecorder.RecorderService.State;
-
 //import org.tensorflow.lite.Interpreter;
 
-public class MainActivity extends Activity implements RecorderServiceListener {
+public class MainActivity extends Activity implements RecorderService.RecorderServiceListener {
 
     private static final String TAG = MainActivity.class.getName();
 
    // Interpreter tflite;
     private RecorderService mRecorderService;
     private Button btnCtlRecorder;
-    private TextView mProgressBarText;
+    private TextView mStatusRecorderText;
 
     private boolean mIsBound;
 
@@ -60,10 +55,10 @@ public class MainActivity extends Activity implements RecorderServiceListener {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-/*
+        mStatusRecorderText = findViewById(R.id.textStatusRecorder);
         btnCtlRecorder = findViewById(R.id.btnCtlRecorder);
-        mProgressBarText = findViewById(R.id.textStatusRecorder);
 
+/*
         // Create the tflite object, loaded from the model file
         try {
             tflite = new Interpreter(loadModelFile());
@@ -74,12 +69,6 @@ public class MainActivity extends Activity implements RecorderServiceListener {
         if(intentRecorder == null) {
             intentRecorder = new Intent(this, RecorderService.class);
         }
-
-        SensorManager mSensorManager    = ((SensorManager)getSystemService(SENSOR_SERVICE));
-        Sensor mRotationSensor          = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
-        Sensor mAccelerometerSensor     = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        Sensor mGyroscopeSensor         = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
-        Sensor mMagnetometerSensor      = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
 
         if(!mIsBound) { doBindService(); }
 
@@ -143,21 +132,21 @@ public class MainActivity extends Activity implements RecorderServiceListener {
     }
 
     @Override
-    public void onStateChanged(State state) {
+    public void onStateChanged(RecorderService.State state) {
         try {
             switch (state) {
                 case IDLE: {
                     btnCtlRecorder.setText(R.string.btn_set_recorder_start);
-                    mProgressBarText.setText(R.string.notification_recording_paused);
+                    mStatusRecorderText.setText(R.string.notification_recording_paused);
                     break;
                 }
                 case PREPARING: {
-                    mProgressBarText.setText(R.string.notification_recording_preping);
+                    mStatusRecorderText.setText(R.string.notification_recording_preping);
                     break;
                 }
                 case RECORDING: {
                     btnCtlRecorder.setText(R.string.btn_set_recorder_stop);
-                    mProgressBarText.setText(R.string.notification_recording_ongoing);
+                    mStatusRecorderText.setText(R.string.notification_recording_ongoing);
                     break;
                 }
                 default: {

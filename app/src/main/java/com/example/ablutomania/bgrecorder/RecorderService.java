@@ -101,7 +101,9 @@ public class RecorderService extends Service {
     }
 
     public void removeListener(RecorderServiceListener listener) {
-        mListeners.remove(listener);
+        if(mListeners.contains(mListeners)) {
+            mListeners.remove(listener);
+        }
     }
 
     @Override
