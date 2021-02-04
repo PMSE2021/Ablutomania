@@ -4,17 +4,13 @@ import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.content.res.AssetFileDescriptor;
 import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
-import org.tensorflow.lite.Interpreter;
 
 import androidx.annotation.Nullable;
 
@@ -22,16 +18,14 @@ import com.example.ablutomania.bgrecorder.RecorderService;
 
 import static com.example.ablutomania.bgrecorder.RecorderService.RecorderServiceListener;
 import static com.example.ablutomania.bgrecorder.RecorderService.State;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.Locale;
+
+//import org.tensorflow.lite.Interpreter;
 
 public class MainActivity extends Activity implements RecorderServiceListener {
 
     private static final String TAG = MainActivity.class.getName();
 
+   // Interpreter tflite;
     private RecorderService mRecorderService;
     private Button btnCtlRecorder;
     private TextView mProgressBarText;
@@ -39,8 +33,6 @@ public class MainActivity extends Activity implements RecorderServiceListener {
     private boolean mIsBound;
 
     private static Intent intentRecorder = null;
-
-    Interpreter tflite;
 
     private ServiceConnection mConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName className, IBinder service) {
@@ -68,6 +60,7 @@ public class MainActivity extends Activity implements RecorderServiceListener {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+/*
         btnCtlRecorder = findViewById(R.id.btnCtlRecorder);
         mProgressBarText = findViewById(R.id.textStatusRecorder);
 
@@ -76,12 +69,11 @@ public class MainActivity extends Activity implements RecorderServiceListener {
             tflite = new Interpreter(loadModelFile());
         } catch (Exception ex){
             ex.printStackTrace();
-        }
+        }*/
 
         if(intentRecorder == null) {
             intentRecorder = new Intent(this, RecorderService.class);
         }
-
 
         SensorManager mSensorManager    = ((SensorManager)getSystemService(SENSOR_SERVICE));
         Sensor mRotationSensor          = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
@@ -176,6 +168,7 @@ public class MainActivity extends Activity implements RecorderServiceListener {
         }
     }
 
+/*
     public float doInference(String inputString) {
         //Input shape is ???
         float[] inputVal = new float[1];
@@ -200,6 +193,6 @@ public class MainActivity extends Activity implements RecorderServiceListener {
         long startOffset = fileDescriptor.getDeclaredLength();
         long declaredLength = fileDescriptor.getDeclaredLength();
         return fileChannel.map(FileChannel.MapMode.READ_ONLY,startOffset,declaredLength);
-    }
+    }*/
 }
 
