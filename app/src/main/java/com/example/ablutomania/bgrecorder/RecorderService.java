@@ -413,10 +413,19 @@ public class RecorderService extends Service {
                 if (sensorEvent.timestamp < mStartTimeNS)
                     return;
 
+                long sensorDelay =0 ;   /* sensorDelay is in use to debug sensor delay over time.*/
                 if (mLastTimestamp != -1)
-                    mOffsetUS += (sensorEvent.timestamp - mLastTimestamp) / 1000;
+                    sensorDelay = (sensorEvent.timestamp - mLastTimestamp) / 1000;
+                    mOffsetUS += sensorDelay;
                 mLastTimestamp = sensorEvent.timestamp;
 
+                /*
+                 *    Uncomment following to lines to allow debugging of sensor delay over time by logcat.
+                 */
+                /*
+                String logText = String.format("logSampleDelay %.4f|%.4f|%d|%s", sensorDelay / 1e6, mOffsetUS / 1e6, mLastTimestamp, mName);
+                Log.i("bgrec",logText);
+                 */
 
                 /*
                  * create an output buffer, once created only delete the last sample. Insert
