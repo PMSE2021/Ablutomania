@@ -16,30 +16,23 @@
         android:orientation="vertical"
         android:weightSum="100">
 
-        <Button
-            android:id="@+id/btnCtlRecorder"
-            android:layout_width="fill_parent"
-            android:layout_height="0dp"
-            android:layout_weight="23"
-            android:gravity="center_horizontal|top"
-            android:textSize="24sp" />
-
         <TextView
-            android:id="@+id/textStatusRecorder"
+            android:id="@+id/lbl_main_activity"
             android:layout_width="fill_parent"
             android:layout_height="0dp"
-            android:layout_weight="54"
+            android:layout_weight="77"
             android:gravity="center"
             android:layout_gravity="center"
+            android:text="@string/lbl_main_activity"
             android:textSize="@dimen/screen_percentage_10" />
 
         <Button
-            android:id="@+id/btn_back_main"
+            android:id="@+id/btn_exit"
             android:layout_width="fill_parent"
             android:layout_height="0dp"
             android:layout_weight="23"
             android:gravity="center_horizontal|bottom"
-            android:text="@string/btn_back_main"
+            android:text="@string/btn_exit"
             android:textSize="24sp" />
     </LinearLayout>
 

@@ -1,10 +1,4 @@
 <resources>
-    <string name="hand_select">On which side \nare you wearing \nyour watch?</string>
-    <string name="btn_left_hand">Left</string>
-    <string name="btn_right_hand">Right</string>
-    <string name="btn_exit_application">EXIT</string>
-    <string name="btn_start_application">START</string>
-    <string name="btn_back_start">BACK</string>
-    <string name="hello_world">Hello Round World!</string>
-    <string name="btn_back_main">BACK</string>
+    <string name="lbl_main_activity">Thanks for using Ablutomania</string>
+    <string name="btn_exit">EXIT</string>
 </resources>

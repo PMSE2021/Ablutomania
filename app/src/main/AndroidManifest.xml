@@ -22,35 +22,19 @@
                Set to true if your app is Standalone, that is, it does not require the handheld
                app to run.
         -->
+
         <meta-data
             android:name="com.google.android.wearable.standalone"
             android:value="true" />
 
         <service
             android:name="com.example.ablutomania.bgrecorder.RecorderService"
-            android:exported="false"/>
+            android:exported="false"
+            android:process=":bgrec"/>
 
-        <activity
-            android:name=".StartActivity"
-            android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-        <activity
-            android:name=".HandSelectActivity"
-            android:label="@string/title_activity_hand_select">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
         <activity
             android:name=".MainActivity"
-            android:label="@string/title_activity_start">
+            android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

@@ -1,14 +1,9 @@
 package com.example.ablutomania;
 
 import android.app.Activity;
-import android.content.ComponentName;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.os.Bundle;
-import android.os.IBinder;
 import android.view.View;
-import android.widget.Button;
-import android.widget.TextView;
 
 import androidx.annotation.Nullable;
 
@@ -16,145 +11,33 @@ import com.example.ablutomania.bgrecorder.RecorderService;
 
 //import org.tensorflow.lite.Interpreter;
 
-public class MainActivity extends Activity implements RecorderService.RecorderServiceListener {
+public class MainActivity extends Activity /* implements RecorderService.RecorderServiceListener */ {
 
     private static final String TAG = MainActivity.class.getName();
 
    // Interpreter tflite;
-    private RecorderService mRecorderService;
-    private Button btnCtlRecorder;
-    private TextView mStatusRecorderText;
-
-    private boolean mIsBound;
-
     private static Intent intentRecorder = null;
-
-    private ServiceConnection mConnection = new ServiceConnection() {
-        public void onServiceConnected(ComponentName className, IBinder service) {
-            // This is called when the connection with the service has
-            // been established, giving us the service object we can use
-            // to interact with the service.
-            mRecorderService = ((RecorderService.LocalBinder)service).getService();
-            mRecorderService.setListener(MainActivity.this);
-
-            SetRecordingButton();
-        }
-
-        public void onServiceDisconnected(ComponentName className) {
-            // This is called when the connection with the service has
-            // been unexpectedly disconnected -- that is, its process
-            // crashed. Because it is running in the same process, this
-            // should never happen.
-            mRecorderService.removeListener(MainActivity.this);
-            mRecorderService = null;
-        }
-    };
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mStatusRecorderText = findViewById(R.id.textStatusRecorder);
-        btnCtlRecorder = findViewById(R.id.btnCtlRecorder);
-
-/*
-        // Create the tflite object, loaded from the model file
-        try {
-            tflite = new Interpreter(loadModelFile());
-        } catch (Exception ex){
-            ex.printStackTrace();
-        }*/
-
         if(intentRecorder == null) {
             intentRecorder = new Intent(this, RecorderService.class);
+            startService(intentRecorder);
         }
 
-        if(!mIsBound) { doBindService(); }
-
-        BackButton();
-    }
-
-    private void doBindService() {
-        bindService(intentRecorder,
-                mConnection,
-                MainActivity.BIND_AUTO_CREATE);
-                mIsBound = true;
-    }
-
-    void doUnbindService() {
-        if (mIsBound) {
-            // Detach existing connection
-            unbindService(mConnection);
-            mIsBound = false;
-        }
-    }
-
-    private void SetRecordingButton() {
-        onStateChanged(mRecorderService.getState());
-
-        btnCtlRecorder.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if(getString(R.string.btn_set_recorder_start) == btnCtlRecorder.getText()) {
-                    if(!mIsBound) { doBindService(); }
-                    // start recorder service
-                    startService(intentRecorder);
-                }
-                else if(getString(R.string.btn_set_recorder_stop) == btnCtlRecorder.getText()) {
-                    // before stopping, it is necessary to unbind service first
-                    doUnbindService();
-                    // stop recorder service
-                    stopService(intentRecorder);
-                }
-            }
+        // exit button to close app
+        findViewById(R.id.btn_exit).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) { finish(); }
         });
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        doUnbindService();
-    }
-
-    private void BackButton() {
-        // back to hand select activity
-        Button btn_back_main = findViewById(R.id.btn_back_main);
-        btn_back_main.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                /* Check if connection has unpredictably lost */
-                if(mRecorderService != null) {
-                    mRecorderService.removeListener(MainActivity.this);
-                }
-                finish();
-            }
-        });
-    }
-
-    @Override
-    public void onStateChanged(RecorderService.State state) {
-        try {
-            switch (state) {
-                case IDLE: {
-                    btnCtlRecorder.setText(R.string.btn_set_recorder_start);
-                    mStatusRecorderText.setText(R.string.notification_recording_paused);
-                    break;
-                }
-                case PREPARING: {
-                    mStatusRecorderText.setText(R.string.notification_recording_preping);
-                    break;
-                }
-                case RECORDING: {
-                    btnCtlRecorder.setText(R.string.btn_set_recorder_stop);
-                    mStatusRecorderText.setText(R.string.notification_recording_ongoing);
-                    break;
-                }
-                default: {
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 
 /*
