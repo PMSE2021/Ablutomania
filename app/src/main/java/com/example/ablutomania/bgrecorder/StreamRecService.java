@@ -34,24 +34,19 @@ import java.util.LinkedList;
 import java.util.TimeZone;
 import java.util.concurrent.CountDownLatch;
 
-/** On start, and if not already running, this Service spawns an ffmpeg instance to
- * record all inertial motion sensor in the background.
- *
- * Created by phil on 07.08.18.
- */
+public class StreamRecService extends Service {
 
-public class RecorderService extends Service {
     private static final double RATE = 50.;
-    private static final String CHANID = "RecorderServiceNotification";
-    private static final String TAG = "RecorderService";
-    private static final String VERSION = "1.21";
+    private static final String CHANID = "StreamRecServiceNotification";
+    private static final String TAG = "StreamRecService";
+    private static final String VERSION = "1.0";
     private final IBinder mBinder = new LocalBinder();
     private FFMpegProcess mFFmpeg;
 
     public static final String ACTION_STOP = "ACTION_STOP";
     public static final String ACTION_STRT = "ACTION_STRT";
     private final LinkedList<CopyListener> mSensorListeners = new LinkedList<>();
-    private static LinkedList<RecorderServiceListener> mListeners = new LinkedList<>();
+    private static LinkedList<StreamRecServiceListener> mListeners = new LinkedList<>();
 
     /* for start synchronization */
     private Long mStartTimeNS = -1L;
@@ -90,17 +85,17 @@ public class RecorderService extends Service {
         return df.format(new Date()) + "_Ablutomania_" + aid + ".mkv";
     }
 
-    public State getState() {
+    public StreamRecService.State getState() {
         return eState;
     }
 
-    public void setListener(RecorderServiceListener listener) {
+    public void setListener(StreamRecServiceListener listener) {
         if(!mListeners.contains(listener)) {
             mListeners.add(listener);
         }
     }
 
-    public void removeListener(RecorderServiceListener listener) {
+    public void removeListener(StreamRecServiceListener listener) {
         if(mListeners.contains(mListeners)) {
             mListeners.remove(listener);
         }
@@ -112,8 +107,8 @@ public class RecorderService extends Service {
     }
 
     public class LocalBinder extends Binder {
-        public RecorderService getService() {
-            return RecorderService.this;
+        public StreamRecService getService() {
+            return StreamRecService.this;
         }
     }
 
@@ -153,7 +148,7 @@ public class RecorderService extends Service {
                     public void run() {
                         try {
                             mSyncLatch.await();
-                            RecorderService.this.notify(false);
+                            StreamRecService.this.notify(false);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
@@ -181,23 +176,23 @@ public class RecorderService extends Service {
         };
 
         if(ispreparing) {
-            eState = State.PREPARING;
+            eState = StreamRecService.State.PREPARING;
         } else if(mFFmpeg != null) {
             if (mSyncLatch != null && mSyncLatch.getCount() == 0) {
-                eState = State.RECORDING;
+                eState = StreamRecService.State.RECORDING;
             } else {
-                eState = State.PREPARING;
+                eState = StreamRecService.State.PREPARING;
             }
         }
         else {
-            eState = State.IDLE;
+            eState = StreamRecService.State.IDLE;
         }
 
-        for(RecorderServiceListener listener : mListeners) {
+        for(StreamRecServiceListener listener : mListeners) {
             listener.onStateChanged(eState);
         }
 
-        return CustomNotification.updateNotification(RecorderService.this, CHANID, notifyContent[eState.ordinal()]);
+        return CustomNotification.updateNotification(StreamRecService.this, CHANID, notifyContent[eState.ordinal()]);
     }
 
 
@@ -274,8 +269,8 @@ public class RecorderService extends Service {
 
         for (Sensor s : sensors)
             b
-            .addAudio(format, RATE, getNumChannels(s))
-            .setStreamTag("name", s.getName());
+                    .addAudio(format, RATE, getNumChannels(s))
+                    .setStreamTag("name", s.getName());
 
 
         mFFmpeg = b.build();
@@ -307,7 +302,7 @@ public class RecorderService extends Service {
             Sensor s = sensors.get(i);
             HandlerThread t = new HandlerThread(s.getName()); t.start();
             Handler h = new Handler(t.getLooper());
-            CopyListener l = new CopyListener(i, RATE, s.getName());
+            StreamRecService.CopyListener l = new StreamRecService.CopyListener(i, RATE, s.getName());
             int delay = s.isWakeUpSensor() ? s.getFifoMaxEventCount() / 2 * us : 1;
             sm.registerListener(l, s, us, delay, h);
             mSensorListeners.add(l);
@@ -323,7 +318,7 @@ public class RecorderService extends Service {
 
                 SensorManager sm = (SensorManager) getSystemService(SENSOR_SERVICE);
 
-                for (CopyListener l : mSensorListeners)
+                for (StreamRecService.CopyListener l : mSensorListeners)
                     sm.flush(l);
 
                 mFFmpeg.waitFor();
@@ -360,7 +355,7 @@ public class RecorderService extends Service {
         }
     }
 
-    public interface RecorderServiceListener {
+    public interface StreamRecServiceListener {
         // function to notify listeners on stated changed
         void onStateChanged(State state);
     }
@@ -415,19 +410,10 @@ public class RecorderService extends Service {
                 if (sensorEvent.timestamp < mStartTimeNS)
                     return;
 
-                long sensorDelay =0 ;   /* sensorDelay is in use to debug sensor delay over time.*/
                 if (mLastTimestamp != -1)
-                    sensorDelay = (sensorEvent.timestamp - mLastTimestamp) / 1000;
-                    mOffsetUS += sensorDelay;
+                    mOffsetUS += (sensorEvent.timestamp - mLastTimestamp) / 1000;
                 mLastTimestamp = sensorEvent.timestamp;
 
-                /*
-                 *    Uncomment following to lines to allow debugging of sensor delay over time by logcat.
-                 */
-                /*
-                String logText = String.format("logSampleDelay %.4f|%.4f|%d|%s", sensorDelay / 1e6, mOffsetUS / 1e6, mLastTimestamp, mName);
-                Log.i("bgrec",logText);
-                 */
 
                 /*
                  * create an output buffer, once created only delete the last sample. Insert
