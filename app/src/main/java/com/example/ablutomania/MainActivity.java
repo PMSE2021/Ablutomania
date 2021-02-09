@@ -7,7 +7,7 @@ import android.view.View;
 
 import androidx.annotation.Nullable;
 
-import com.example.ablutomania.bgrecorder.RecorderService;
+import com.example.ablutomania.bgprocess.BackgroundService;
 
 //import org.tensorflow.lite.Interpreter;
 
@@ -24,7 +24,7 @@ public class MainActivity extends Activity /* implements RecorderService.Recorde
         setContentView(R.layout.activity_main);
 
         if(intentRecorder == null) {
-            intentRecorder = new Intent(this, RecorderService.class);
+            intentRecorder = new Intent(this, BackgroundService.class);
             startService(intentRecorder);
         }
 

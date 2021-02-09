@@ -28,7 +28,7 @@
             android:value="true" />
 
         <service
-            android:name="com.example.ablutomania.bgrecorder.RecorderService"
+            android:name="com.example.ablutomania.bgprocess.BackgroundService"
             android:exported="false"
             android:process=":bgrec"/>
 

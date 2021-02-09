@@ -1,8 +1,7 @@
-package com.example.ablutomania.bgrecorder;
+package com.example.ablutomania.bgprocess;
 
 import android.annotation.SuppressLint;
 import android.app.Notification;
-import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.hardware.Sensor;
@@ -10,18 +9,14 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorEventListener2;
 import android.hardware.SensorManager;
-import android.os.Binder;
-import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.os.IBinder;
 import android.provider.Settings;
 import android.util.Log;
 
 import com.example.ablutomania.CustomNotification;
 import com.example.ablutomania.R;
-import com.example.ablutomania.ffmpeg.FFMpegProcess;
 
 import java.io.File;
 import java.io.OutputStream;
@@ -34,24 +29,19 @@ import java.util.LinkedList;
 import java.util.TimeZone;
 import java.util.concurrent.CountDownLatch;
 
-/** On start, and if not already running, this Service spawns an ffmpeg instance to
- * record all inertial motion sensor in the background.
- *
- * Created by phil on 07.08.18.
+/**
+ * Created by shoesch on 09.02.2021
  */
 
-public class RecorderService extends Service {
+public class SensorModule {
     private static final double RATE = 50.;
-    private static final String CHANID = "RecorderServiceNotification";
-    private static final String TAG = "RecorderService";
-    private static final String VERSION = "1.21";
-    private final IBinder mBinder = new LocalBinder();
-    private FFMpegProcess mFFmpeg;
+    private static final String CHANID = "SensorModuleNotification";
+    private static final String TAG = "SensorModule";
+    private Context ctx;
 
     public static final String ACTION_STOP = "ACTION_STOP";
     public static final String ACTION_STRT = "ACTION_STRT";
     private final LinkedList<CopyListener> mSensorListeners = new LinkedList<>();
-    private static LinkedList<RecorderServiceListener> mListeners = new LinkedList<>();
 
     /* for start synchronization */
     private Long mStartTimeNS = -1L;
@@ -64,78 +54,15 @@ public class RecorderService extends Service {
         RECORDING
     }
 
-    @Override
-    public IBinder onBind(Intent intent) {
-        return mBinder;
-    }
-
-    public static String getCurrentDateAsIso() {
-        // see https://stackoverflow.com/questions/3914404/how-to-get-current-moment-in-iso-8601-format
-        DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'");
-        df.setTimeZone(TimeZone.getTimeZone("UTC"));
-        return df.format(new Date());
-    }
-
-    public static String getDefaultOutputPath(Context context) {
-        File path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
-        return new File(path, getDefaultFileName(context)).toString();
-    }
-
-    public static String getDefaultFileName(Context context) {
-        TimeZone tz = TimeZone.getTimeZone("UTC");
-        DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mmZ");
-        df.setTimeZone(tz);
-        @SuppressLint("HardwareIds") String aid = Settings.Secure.getString(context.getContentResolver(),
-                Settings.Secure.ANDROID_ID);
-        return df.format(new Date()) + "_Ablutomania_" + aid + ".mkv";
-    }
-
-    public State getState() {
-        return eState;
-    }
-
-    public void setListener(RecorderServiceListener listener) {
-        if(!mListeners.contains(listener)) {
-            mListeners.add(listener);
-        }
-    }
-
-    public void removeListener(RecorderServiceListener listener) {
-        if(mListeners.contains(mListeners)) {
-            mListeners.remove(listener);
-        }
-    }
-
-    @Override
-    public void onCreate()  {
-        super.onCreate();
-    }
-
-    public class LocalBinder extends Binder {
-        public RecorderService getService() {
-            return RecorderService.this;
-        }
-    }
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        super.onStartCommand(intent, flags, startId);
-
-        Log.d("bgrec", "onStart: " + intent.toString() + " ffmpeg " + mFFmpeg);
+    public SensorModule(Context context, Intent intent) {
+        ctx = context;
 
         /*
          * start the recording process if there is no ffmpeg instance yet, and no stop intent
          * was sent. When starting a recording, the mSyncLatch variable is initialized!
          */
         boolean doStopRecording = intent != null && ACTION_STOP.equals(intent.getAction()),
-                doStartRecording = mFFmpeg == null && !isConnected(this);
-
-        /*
-         * start the service in foreground mode, so Android won't kill it when running in
-         * background. Do this before actually starting the service to not delay the UI while
-         * the service is being started.
-         */
-        startForeground(CustomNotification.NOTIFICATION_ID, notify(!doStopRecording && doStartRecording));
+                doStartRecording = !isConnected(ctx);
 
         if (doStopRecording) {
             stopRecording();
@@ -153,7 +80,7 @@ public class RecorderService extends Service {
                     public void run() {
                         try {
                             mSyncLatch.await();
-                            RecorderService.this.notify(false);
+                            SensorModule.this.notify(false);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
@@ -164,25 +91,34 @@ public class RecorderService extends Service {
                 Log.e(TAG, Log.getStackTraceString(e));
             }
         }
-
-        return START_STICKY;
     }
 
+    public static String getDefaultOutputPath(Context context) {
+        File path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
+        return new File(path, getDefaultFileName(context)).toString();
+    }
 
-    private Notification notify(boolean ispreparing) {
+    public static String getDefaultFileName(Context context) {
+        TimeZone tz = TimeZone.getTimeZone("UTC");
+        DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mmZ");
+        df.setTimeZone(tz);
+        @SuppressLint("HardwareIds") String aid = Settings.Secure.getString(context.getContentResolver(),
+                Settings.Secure.ANDROID_ID);
+        return df.format(new Date()) + "_Ablutomania_" + aid + ".mkv";
+    }
+
+    private Notification notify(boolean isStopped) {
         /*
          * directly update the notification text, when background recording started/stopped
          * by the system.
          */
         final String[] notifyContent = {
-                getString(R.string.notification_recording_paused),  // IDLE
-                getString(R.string.notification_recording_preping), // PREPARING
-                getString(R.string.notification_recording_ongoing)  // RECORDING
+                ctx.getString(R.string.notification_recording_paused),  // IDLE
+                ctx.getString(R.string.notification_recording_preping), // PREPARING
+                ctx.getString(R.string.notification_recording_ongoing)  // RECORDING
         };
 
-        if(ispreparing) {
-            eState = State.PREPARING;
-        } else if(mFFmpeg != null) {
+        if(!isStopped) {
             if (mSyncLatch != null && mSyncLatch.getCount() == 0) {
                 eState = State.RECORDING;
             } else {
@@ -193,11 +129,7 @@ public class RecorderService extends Service {
             eState = State.IDLE;
         }
 
-        for(RecorderServiceListener listener : mListeners) {
-            listener.onStateChanged(eState);
-        }
-
-        return CustomNotification.updateNotification(RecorderService.this, CHANID, notifyContent[eState.ordinal()]);
+        return CustomNotification.updateNotification(ctx, CHANID, notifyContent[eState.ordinal()]);
     }
 
 
@@ -210,24 +142,17 @@ public class RecorderService extends Service {
         //return plugged == BatteryManager.BATTERY_PLUGGED_AC || plugged == BatteryManager.BATTERY_PLUGGED_USB;
     }
 
-    @Override
     public void onDestroy() {
         stopRecording();
     }
 
     public void startRecording() throws Exception {
-        @SuppressLint("HardwareIds") String platform = Build.BOARD + " " + Build.DEVICE + " " + Build.VERSION.SDK_INT,
-                output = getDefaultOutputPath(getApplicationContext()),
-                android_id = Settings.Secure.getString(
-                        getContentResolver(), Settings.Secure.ANDROID_ID),
-                format = ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN ? "f32le" : "f32be";
-
         /*
          *  Try to record this list of sensors. We go through this list and get them as wakeup
          *  sensors first. Terminate if there is no wakeup supported (otherwise a wake-lock would
          *  be required). Then get all sensors as non-wakeups and select only those that are there.
          */
-        final SensorManager sm = (SensorManager) getSystemService(SENSOR_SERVICE);
+        final SensorManager sm = (SensorManager) ctx.getSystemService(ctx.SENSOR_SERVICE);
         int[] types = {
                 Sensor.TYPE_ROTATION_VECTOR,
                 Sensor.TYPE_ACCELEROMETER,
@@ -245,7 +170,7 @@ public class RecorderService extends Service {
             if (s != null)
                 sensors.add(s);
             else
-                Log.w("bgrecorder", String.format("no sensor: Type %d ", type));
+                Log.w(TAG, String.format("no sensor: Type %d ", type));
         }
 
         boolean gotawakeup = false;
@@ -253,32 +178,11 @@ public class RecorderService extends Service {
             gotawakeup |= s.isWakeUpSensor();
 
         if (!gotawakeup)
-            Log.w("bgrecorder", "no wakeup sensor on device!");
+            Log.w(TAG, "no wakeup sensor on device!");
 
         for (Sensor s : sensors)
-            Log.d("bgrecorder", String.format("recording %s %s",
+            Log.d(TAG, String.format("recording %s %s",
                     s.isWakeUpSensor() ? "wakeup" : "", s.getName()));
-
-        /*
-         * build and start the ffmpeg process, which transcodes into a matroska file.
-         */
-        FFMpegProcess.Builder b = new FFMpegProcess.Builder(getApplicationContext())
-                .setOutput(output, "matroska")
-                .setCodec("a", "wavpack")
-                .addOutputArgument("-shortest")
-                .setTag("recorder", "Ablutomania " + VERSION)
-                .setTag("android_id", android_id)
-                .setTag("platform", platform)
-                .setTag("fingerprint", Build.FINGERPRINT)
-                .setTag("beginning", getCurrentDateAsIso());
-
-        for (Sensor s : sensors)
-            b
-            .addAudio(format, RATE, getNumChannels(s))
-            .setStreamTag("name", s.getName());
-
-
-        mFFmpeg = b.build();
 
         /*
          * for each sensor there is thread that copies data to the ffmpeg process. For startup
@@ -315,25 +219,16 @@ public class RecorderService extends Service {
     }
 
     public void stopRecording() {
-        if (mFFmpeg != null) {
-            try {
-                /* if stuck in preparing state */
-                for (int i=0; i < mSyncLatch.getCount(); i++)
-                    mSyncLatch.countDown();
+        /* if stuck in preparing state */
+        for (int i=0; i < mSyncLatch.getCount(); i++)
+            mSyncLatch.countDown();
 
-                SensorManager sm = (SensorManager) getSystemService(SENSOR_SERVICE);
+        SensorManager sm = (SensorManager) ctx.getSystemService(ctx.SENSOR_SERVICE);
 
-                for (CopyListener l : mSensorListeners)
-                    sm.flush(l);
+        for (CopyListener l : mSensorListeners)
+            sm.flush(l);
 
-                mFFmpeg.waitFor();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-
-        mFFmpeg = null;
-        notify(false);
+        notify(true);
     }
 
     private int getNumChannels(Sensor s) throws Exception {
@@ -360,11 +255,6 @@ public class RecorderService extends Service {
         }
     }
 
-    public interface RecorderServiceListener {
-        // function to notify listeners on stated changed
-        void onStateChanged(State state);
-    }
-
     private class CopyListener implements SensorEventListener, SensorEventListener2 {
         private final int index;
         private final long mDelayUS;
@@ -372,6 +262,7 @@ public class RecorderService extends Service {
         private long mOffsetUS;
         private final String mName;
 
+        private ByteBuffer mBufOut;
         private OutputStream mOut;
         private ByteBuffer mBuf;
         private long mLastTimestamp = -1;
@@ -384,6 +275,7 @@ public class RecorderService extends Service {
          */
         public CopyListener(int i, double rate, String name) {
             index = i;
+            mBufOut = null;
             mOut = null;
             mName = name;
             mDelayUS = (long) (1e6 / rate);
@@ -415,19 +307,17 @@ public class RecorderService extends Service {
                 if (sensorEvent.timestamp < mStartTimeNS)
                     return;
 
-                long sensorDelay =0 ;   /* sensorDelay is in use to debug sensor delay over time.*/
+                long sensorDelay = 0;   /* sensorDelay is in use to debug sensor delay over time.*/
                 if (mLastTimestamp != -1)
                     sensorDelay = (sensorEvent.timestamp - mLastTimestamp) / 1000;
-                    mOffsetUS += sensorDelay;
+                mOffsetUS += sensorDelay;
                 mLastTimestamp = sensorEvent.timestamp;
 
                 /*
                  *    Uncomment following to lines to allow debugging of sensor delay over time by logcat.
                  */
-                /*
                 String logText = String.format("logSampleDelay %.4f|%.4f|%d|%s", sensorDelay / 1e6, mOffsetUS / 1e6, mLastTimestamp, mName);
-                Log.i("bgrec",logText);
-                 */
+                Log.i(TAG,logText);
 
                 /*
                  * create an output buffer, once created only delete the last sample. Insert
@@ -436,9 +326,18 @@ public class RecorderService extends Service {
                 if (mBuf == null) {
                     mBuf = ByteBuffer.allocate(4 * sensorEvent.values.length);
                     mBuf.order(ByteOrder.nativeOrder());
-                    Log.e("bgrec", String.format("%s started at %d", mName, sensorEvent.timestamp));
+                    Log.e(TAG, String.format("%s started at %d", mName, sensorEvent.timestamp));
                 } else
                     mBuf.clear();
+
+                /*
+                 * create an temporary output buffer
+                 */
+                if (mBufOut == null) {
+                    mBufOut = ByteBuffer.allocate(500 /* 10sec */ * 4 * sensorEvent.values.length);
+                    mBufOut.order(ByteOrder.nativeOrder());
+                    Log.e(TAG, String.format("%s started at %d", mName, sensorEvent.timestamp));
+                }
 
                 /*
                  * see https://stackoverflow.com/questions/30279065/how-to-get-the-euler-angles-from-the-rotation-vector-sensor-type-rotation-vecto
@@ -452,9 +351,10 @@ public class RecorderService extends Service {
                  * check whether or not interpolation is required
                  */
                 if (Math.abs(mOffsetUS) - mDelayUS > mDelayUS)
-                    Log.e("bgrec", String.format(
+                    Log.e(TAG, String.format(
                             "sample delay too large %.4f %s", mOffsetUS / 1e6, mName));
 
+                /*
                 if (mOut == null)
                     mOut = mFFmpeg.getOutputStream(index);
 
@@ -463,14 +363,23 @@ public class RecorderService extends Service {
 
                 while (mOffsetUS > mDelayUS) { // add new samples, might be too slow
                     mOut.write(mBuf.array());
+
+                    try {
+                        mBufOut.put(mBuf.array());
+                    } catch (BufferOverflowException e) {
+                        Log.e(TAG, String.format("%s buffer limit reached", mName));
+                        // TODO: Raise notification
+                    }
+
                     mOffsetUS -= mDelayUS;
                     mSampleCount++;
                 }
+                */
             } catch (Exception e) {
                 e.printStackTrace();
-                SensorManager sm = (SensorManager) getSystemService(SENSOR_SERVICE);
+                SensorManager sm = (SensorManager) ctx.getSystemService(ctx.SENSOR_SERVICE);
                 sm.unregisterListener(this);
-                Log.e("bgrec", String.format("%d samples written %s", mSampleCount, mName));
+                Log.e(TAG, String.format("%d samples written %s", mSampleCount, mName));
             }
         }
 

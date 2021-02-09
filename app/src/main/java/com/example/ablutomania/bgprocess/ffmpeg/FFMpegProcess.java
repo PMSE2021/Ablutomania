@@ -1,4 +1,4 @@
-package com.example.ablutomania.ffmpeg;
+package com.example.ablutomania.bgprocess.ffmpeg;
 
 import android.content.Context;
 import android.os.AsyncTask;

@@ -1,4 +1,4 @@
-package com.example.ablutomania.bgrecorder;
+package com.example.ablutomania.bgprocess;
 
 import android.annotation.SuppressLint;
 import android.app.Notification;
@@ -21,7 +21,7 @@ import android.util.Log;
 
 import com.example.ablutomania.CustomNotification;
 import com.example.ablutomania.R;
-import com.example.ablutomania.ffmpeg.FFMpegProcess;
+import com.example.ablutomania.bgprocess.ffmpeg.FFMpegProcess;
 
 import java.io.File;
 import java.io.OutputStream;
