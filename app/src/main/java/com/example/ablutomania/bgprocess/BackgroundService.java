@@ -38,6 +38,7 @@ public class BackgroundService extends Service {
 
         // Create instance and start sensor module
         mSensorModule = new SensorModule((Context)BackgroundService.this , intent);
+        new Thread(mSensorModule).start();
 
         //TODO: StreamRecService
 
@@ -50,6 +51,8 @@ public class BackgroundService extends Service {
 
     @Override
     public void onDestroy() {
+        mSensorModule.onDestroy();
+        mMLWrapper.onDestroy();
         // TODO
     }
 }

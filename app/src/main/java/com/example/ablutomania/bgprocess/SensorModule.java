@@ -9,19 +9,19 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorEventListener2;
 import android.hardware.SensorManager;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
 
 import com.example.ablutomania.CustomNotification;
 import com.example.ablutomania.R;
+import com.example.ablutomania.bgprocess.types.Datapoint;
+import com.example.ablutomania.bgprocess.types.FIFO;
 
-import java.io.File;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -33,20 +33,33 @@ import java.util.concurrent.CountDownLatch;
  * Created by shoesch on 09.02.2021
  */
 
-public class SensorModule {
+public class SensorModule implements Runnable {
     private static final double RATE = 50.;
     private static final String CHANID = "SensorModuleNotification";
     private static final String TAG = "SensorModule";
     private Context ctx;
+    private Handler handler;
 
     public static final String ACTION_STOP = "ACTION_STOP";
     public static final String ACTION_STRT = "ACTION_STRT";
     private final LinkedList<CopyListener> mSensorListeners = new LinkedList<>();
 
+    LinkedList<Sensor> sensors = new LinkedList<>();
+
+    private LinkedList<FIFO<float[]>> mFifos = new LinkedList<>();
+
     /* for start synchronization */
     private Long mStartTimeNS = -1L;
     private CountDownLatch mSyncLatch = null;
     private State eState = State.IDLE;
+    private long mLastTimestamp = -1;
+
+    private static final int[] types = {
+            Sensor.TYPE_ROTATION_VECTOR,
+            Sensor.TYPE_ACCELEROMETER,
+            Sensor.TYPE_GYROSCOPE,
+            Sensor.TYPE_MAGNETIC_FIELD
+    };
 
     public enum State {
         IDLE,
@@ -56,6 +69,7 @@ public class SensorModule {
 
     public SensorModule(Context context, Intent intent) {
         ctx = context;
+        handler = new Handler(Looper.getMainLooper());
 
         /*
          * start the recording process if there is no ffmpeg instance yet, and no stop intent
@@ -93,9 +107,27 @@ public class SensorModule {
         }
     }
 
-    public static String getDefaultOutputPath(Context context) {
-        File path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
-        return new File(path, getDefaultFileName(context)).toString();
+    @Override
+    public void run() {
+        // TODO: Function is now called cyclic, but not in a period of 10ms
+        handler.postDelayed(this, (long) (1e3 / RATE));
+
+        long mOffset = 0;
+        if (mLastTimestamp == -1) {
+            mLastTimestamp = System.currentTimeMillis();
+        } else {
+            long t = System.currentTimeMillis();
+            mOffset = t - mLastTimestamp;
+            mLastTimestamp = t;
+        }
+
+        Log.d(TAG, String.format("running: offset = %dms", mOffset));
+
+        /*
+         * monitor the output fifos of each sensor and create datapoints if each values is
+         * available.
+         */
+        shiftDatapointsToPipeline();
     }
 
     public static String getDefaultFileName(Context context) {
@@ -153,13 +185,6 @@ public class SensorModule {
          *  be required). Then get all sensors as non-wakeups and select only those that are there.
          */
         final SensorManager sm = (SensorManager) ctx.getSystemService(ctx.SENSOR_SERVICE);
-        int[] types = {
-                Sensor.TYPE_ROTATION_VECTOR,
-                Sensor.TYPE_ACCELEROMETER,
-                Sensor.TYPE_GYROSCOPE,
-                Sensor.TYPE_MAGNETIC_FIELD
-        };
-        LinkedList<Sensor> sensors = new LinkedList<>();
 
         for (int type : types) {
             Sensor s = sm.getDefaultSensor(type, true);
@@ -215,6 +240,7 @@ public class SensorModule {
             int delay = s.isWakeUpSensor() ? s.getFifoMaxEventCount() / 2 * us : 1;
             sm.registerListener(l, s, us, delay, h);
             mSensorListeners.add(l);
+            mFifos.add(new FIFO<float[]>());
         }
     }
 
@@ -231,27 +257,61 @@ public class SensorModule {
         notify(true);
     }
 
-    private int getNumChannels(Sensor s) throws Exception {
-        /*
-         * https://developer.android.com/reference/android/hardware/SensorEvent#sensor
-         */
-        switch (s.getType()) {
-            case Sensor.TYPE_ACCELEROMETER:
-            case Sensor.TYPE_GYROSCOPE:
-            case Sensor.TYPE_MAGNETIC_FIELD:
-                return 3;
 
-            case Sensor.TYPE_ROTATION_VECTOR:
-                return 5;
+    private void shiftDatapointsToPipeline() {
+        synchronized (this) {
 
-            case Sensor.TYPE_RELATIVE_HUMIDITY:
-            case Sensor.TYPE_PRESSURE:
-            case Sensor.TYPE_LIGHT:
-            case Sensor.TYPE_AMBIENT_TEMPERATURE:
-                return 1;
+            boolean bDpAvailable;
 
-            default:
-                throw new Exception("unknown number of channels for " + s.getName());
+            do {
+                bDpAvailable = true;
+
+                for (FIFO<float[]> list : mFifos) {
+                    if (!(list.size() > 0)) {
+                        bDpAvailable = false;
+                    }
+                }
+
+                Log.i(TAG, String.format("fifo list %d %d %d %d", mFifos.get(0).size(), mFifos.get(1).size(), mFifos.get(2).size(), mFifos.get(3).size()));
+
+                if (bDpAvailable) {
+                    try {
+                        Datapoint dp = new Datapoint();
+
+                        for (int i = 0; i < mFifos.size(); i++) {
+                            // Write mFifos to data pipeline
+                            switch (sensors.get(i).getType()) {
+                                case Sensor.TYPE_ACCELEROMETER: {
+                                    dp.setAccelerometerData(mFifos.get(i).get());
+                                    break;
+                                }
+                                case Sensor.TYPE_GYROSCOPE: {
+                                    dp.setGyroscopeData(mFifos.get(i).get());
+                                    break;
+                                }
+                                case Sensor.TYPE_MAGNETIC_FIELD: {
+                                    dp.setMagnetometerData(mFifos.get(i).get());
+                                    break;
+                                }
+                                case Sensor.TYPE_ROTATION_VECTOR: {
+                                    dp.setRotationVectorData(mFifos.get(i).get());
+                                    break;
+                                }
+                                default:
+                                    Log.e(TAG, String.format("unknown sensor type:  %d" + sensors.get(i).getType()));
+                            }
+                        }
+                        // Add complete datapoint to pipeline
+                        //DataPipeline.put(dp);
+                        if (dp != null)
+                            Log.i(TAG, String.format("Move Datapoint to DataPipeline: " + dp.toString()));
+                    } catch (Exception e) {
+                        e.printStackTrace();
+
+                        Log.e(TAG, String.format("bDataAvailable %d %d %d %d", mFifos.get(0).size(), mFifos.get(1).size(), mFifos.get(2).size(), mFifos.get(3).size()));
+                    }
+                }
+            } while (bDpAvailable);
         }
     }
 
@@ -320,61 +380,23 @@ public class SensorModule {
                 Log.i(TAG,logText);
 
                 /*
-                 * create an output buffer, once created only delete the last sample. Insert
-                 * values afterwards.
-                 */
-                if (mBuf == null) {
-                    mBuf = ByteBuffer.allocate(4 * sensorEvent.values.length);
-                    mBuf.order(ByteOrder.nativeOrder());
-                    Log.e(TAG, String.format("%s started at %d", mName, sensorEvent.timestamp));
-                } else
-                    mBuf.clear();
-
-                /*
-                 * create an temporary output buffer
-                 */
-                if (mBufOut == null) {
-                    mBufOut = ByteBuffer.allocate(500 /* 10sec */ * 4 * sensorEvent.values.length);
-                    mBufOut.order(ByteOrder.nativeOrder());
-                    Log.e(TAG, String.format("%s started at %d", mName, sensorEvent.timestamp));
-                }
-
-                /*
-                 * see https://stackoverflow.com/questions/30279065/how-to-get-the-euler-angles-from-the-rotation-vector-sensor-type-rotation-vecto
-                 * https://developer.android.com/reference/android/hardware/SensorEvent#sensor
-                 */
-
-                for (float v : sensorEvent.values)
-                    mBuf.putFloat(v);
-
-                /*
                  * check whether or not interpolation is required
                  */
                 if (Math.abs(mOffsetUS) - mDelayUS > mDelayUS)
                     Log.e(TAG, String.format(
                             "sample delay too large %.4f %s", mOffsetUS / 1e6, mName));
 
-                /*
-                if (mOut == null)
-                    mOut = mFFmpeg.getOutputStream(index);
-
                 if (mOffsetUS < mDelayUS)      // too fast -> remove
                     return;
 
                 while (mOffsetUS > mDelayUS) { // add new samples, might be too slow
-                    mOut.write(mBuf.array());
-
-                    try {
-                        mBufOut.put(mBuf.array());
-                    } catch (BufferOverflowException e) {
-                        Log.e(TAG, String.format("%s buffer limit reached", mName));
-                        // TODO: Raise notification
+                    synchronized (SensorModule.this) {
+                        mFifos.get(index).put(sensorEvent.values);
                     }
-
                     mOffsetUS -= mDelayUS;
                     mSampleCount++;
                 }
-                */
+
             } catch (Exception e) {
                 e.printStackTrace();
                 SensorManager sm = (SensorManager) ctx.getSystemService(ctx.SENSOR_SERVICE);
