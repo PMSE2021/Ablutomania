@@ -17,7 +17,7 @@ import android.util.Log;
 
 import com.example.ablutomania.CustomNotification;
 import com.example.ablutomania.bgprocess.ffmpeg.FFMpegProcess;
-
+import com.example.ablutomania.bgprocess.types.Datapoint;
 import java.io.File;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
@@ -285,7 +285,7 @@ public class StorageModule {
     }
 
 
-    // need onSensorChanged else
+
     private class CopyListener {
         private final int index;
         private final long mDelayUS;
@@ -320,7 +320,12 @@ public class StorageModule {
             mOffsetUS = 0;
         }
 
-        public void run(DataPipeline.Datapoint dp) {
+        public void run() {
+
+            if (DataPipeline.getOutputFIFO().size() < 1)
+                return;
+
+            Datapoint dp = DataPipeline.getOutputFIFO().get();
 
             // set buffer size for each sensor + ML result
             ByteBuffer mBufRot = ByteBuffer.allocate(4 * 5);
