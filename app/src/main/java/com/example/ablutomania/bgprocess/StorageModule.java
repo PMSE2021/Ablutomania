@@ -2,25 +2,20 @@ package com.example.ablutomania.bgprocess;
 
 import android.annotation.SuppressLint;
 import android.app.Notification;
-import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
-import android.hardware.SensorEventListener2;
 import android.hardware.SensorManager;
-import android.os.Binder;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.os.IBinder;
 import android.provider.Settings;
 import android.util.Log;
 
 import com.example.ablutomania.CustomNotification;
-import com.example.ablutomania.R;
 import com.example.ablutomania.bgprocess.ffmpeg.FFMpegProcess;
 
 import java.io.File;
@@ -34,19 +29,18 @@ import java.util.LinkedList;
 import java.util.TimeZone;
 import java.util.concurrent.CountDownLatch;
 
-public class StreamRecService extends Service {
+public class StorageModule {
 
     private static final double RATE = 50.;
-    private static final String CHANID = "StreamRecServiceNotification";
-    private static final String TAG = "StreamRecService";
+    private static final String CHANID = "StorageModuleNotification";
+    private static final String TAG = "StorageModule";
     private static final String VERSION = "1.0";
-    private final IBinder mBinder = new LocalBinder();
     private FFMpegProcess mFFmpeg;
+    private final Context ctx;
 
     public static final String ACTION_STOP = "ACTION_STOP";
     public static final String ACTION_STRT = "ACTION_STRT";
     private final LinkedList<CopyListener> mSensorListeners = new LinkedList<>();
-    private static LinkedList<StreamRecServiceListener> mListeners = new LinkedList<>();
 
     /* for start synchronization */
     private Long mStartTimeNS = -1L;
@@ -57,11 +51,6 @@ public class StreamRecService extends Service {
         IDLE,
         PREPARING,
         RECORDING
-    }
-
-    @Override
-    public IBinder onBind(Intent intent) {
-        return mBinder;
     }
 
     public static String getCurrentDateAsIso() {
@@ -85,36 +74,12 @@ public class StreamRecService extends Service {
         return df.format(new Date()) + "_Ablutomania_" + aid + ".mkv";
     }
 
-    public StreamRecService.State getState() {
+    public StorageModule.State getState() {
         return eState;
     }
 
-    public void setListener(StreamRecServiceListener listener) {
-        if(!mListeners.contains(listener)) {
-            mListeners.add(listener);
-        }
-    }
-
-    public void removeListener(StreamRecServiceListener listener) {
-        if(mListeners.contains(mListeners)) {
-            mListeners.remove(listener);
-        }
-    }
-
-    @Override
-    public void onCreate()  {
-        super.onCreate();
-    }
-
-    public class LocalBinder extends Binder {
-        public StreamRecService getService() {
-            return StreamRecService.this;
-        }
-    }
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        super.onStartCommand(intent, flags, startId);
+    public StorageModule(Context context, Intent intent) {
+        ctx = context;
 
         Log.d("bgrec", "onStart: " + intent.toString() + " ffmpeg " + mFFmpeg);
 
@@ -123,19 +88,19 @@ public class StreamRecService extends Service {
          * was sent. When starting a recording, the mSyncLatch variable is initialized!
          */
         boolean doStopRecording = intent != null && ACTION_STOP.equals(intent.getAction()),
-                doStartRecording = mFFmpeg == null && !isConnected(this);
+                doStartRecording = mFFmpeg == null && !isConnected(ctx);
 
         /*
          * start the service in foreground mode, so Android won't kill it when running in
          * background. Do this before actually starting the service to not delay the UI while
          * the service is being started.
          */
-        startForeground(CustomNotification.NOTIFICATION_ID, notify(!doStopRecording && doStartRecording));
+
+        //startForeground(CustomNotification.NOTIFICATION_ID, notify(!doStopRecording && doStartRecording));
 
         if (doStopRecording) {
             stopRecording();
-        }
-        else if (doStartRecording) {
+        } else if (doStartRecording) {
             try {
                 startRecording();
 
@@ -148,7 +113,6 @@ public class StreamRecService extends Service {
                     public void run() {
                         try {
                             mSyncLatch.await();
-                            StreamRecService.this.notify(false);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
@@ -159,42 +123,12 @@ public class StreamRecService extends Service {
                 Log.e(TAG, Log.getStackTraceString(e));
             }
         }
-
-        return START_STICKY;
     }
 
+    private Notification notify(String notification) {
 
-    private Notification notify(boolean ispreparing) {
-        /*
-         * directly update the notification text, when background recording started/stopped
-         * by the system.
-         */
-        final String[] notifyContent = {
-                getString(R.string.notification_recording_paused),  // IDLE
-                getString(R.string.notification_recording_preping), // PREPARING
-                getString(R.string.notification_recording_ongoing)  // RECORDING
-        };
-
-        if(ispreparing) {
-            eState = StreamRecService.State.PREPARING;
-        } else if(mFFmpeg != null) {
-            if (mSyncLatch != null && mSyncLatch.getCount() == 0) {
-                eState = StreamRecService.State.RECORDING;
-            } else {
-                eState = StreamRecService.State.PREPARING;
-            }
-        }
-        else {
-            eState = StreamRecService.State.IDLE;
-        }
-
-        for(StreamRecServiceListener listener : mListeners) {
-            listener.onStateChanged(eState);
-        }
-
-        return CustomNotification.updateNotification(StreamRecService.this, CHANID, notifyContent[eState.ordinal()]);
+        return CustomNotification.updateNotification(ctx, CHANID, notification);
     }
-
 
     public static boolean isConnected(Context context) {
         return false;
@@ -205,16 +139,15 @@ public class StreamRecService extends Service {
         //return plugged == BatteryManager.BATTERY_PLUGGED_AC || plugged == BatteryManager.BATTERY_PLUGGED_USB;
     }
 
-    @Override
     public void onDestroy() {
         stopRecording();
     }
 
     public void startRecording() throws Exception {
         @SuppressLint("HardwareIds") String platform = Build.BOARD + " " + Build.DEVICE + " " + Build.VERSION.SDK_INT,
-                output = getDefaultOutputPath(getApplicationContext()),
+                output = getDefaultOutputPath(ctx.getApplicationContext()),
                 android_id = Settings.Secure.getString(
-                        getContentResolver(), Settings.Secure.ANDROID_ID),
+                        ctx.getContentResolver(), Settings.Secure.ANDROID_ID),
                 format = ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN ? "f32le" : "f32be";
 
         /*
@@ -222,7 +155,7 @@ public class StreamRecService extends Service {
          *  sensors first. Terminate if there is no wakeup supported (otherwise a wake-lock would
          *  be required). Then get all sensors as non-wakeups and select only those that are there.
          */
-        final SensorManager sm = (SensorManager) getSystemService(SENSOR_SERVICE);
+        final SensorManager sm = (SensorManager) ctx.getSystemService(Context.SENSOR_SERVICE);
         int[] types = {
                 Sensor.TYPE_ROTATION_VECTOR,
                 Sensor.TYPE_ACCELEROMETER,
@@ -257,7 +190,7 @@ public class StreamRecService extends Service {
         /*
          * build and start the ffmpeg process, which transcodes into a matroska file.
          */
-        FFMpegProcess.Builder b = new FFMpegProcess.Builder(getApplicationContext())
+        FFMpegProcess.Builder b = new FFMpegProcess.Builder(ctx.getApplicationContext())
                 .setOutput(output, "matroska")
                 .setCodec("a", "wavpack")
                 .addOutputArgument("-shortest")
@@ -295,16 +228,17 @@ public class StreamRecService extends Service {
                 }
 
                 @Override
-                public void onAccuracyChanged(Sensor sensor, int accuracy) {}
+                public void onAccuracyChanged(Sensor sensor, int accuracy) {
+                }
             }, sensors.get(i), us);
 
         for (int i = 0; i < sensors.size(); i++) {
             Sensor s = sensors.get(i);
-            HandlerThread t = new HandlerThread(s.getName()); t.start();
+            HandlerThread t = new HandlerThread(s.getName());
+            t.start();
             Handler h = new Handler(t.getLooper());
-            StreamRecService.CopyListener l = new StreamRecService.CopyListener(i, RATE, s.getName());
+            StorageModule.CopyListener l = new StorageModule.CopyListener(i, RATE, s.getName());
             int delay = s.isWakeUpSensor() ? s.getFifoMaxEventCount() / 2 * us : 1;
-            sm.registerListener(l, s, us, delay, h);
             mSensorListeners.add(l);
         }
     }
@@ -313,13 +247,8 @@ public class StreamRecService extends Service {
         if (mFFmpeg != null) {
             try {
                 /* if stuck in preparing state */
-                for (int i=0; i < mSyncLatch.getCount(); i++)
+                for (int i = 0; i < mSyncLatch.getCount(); i++)
                     mSyncLatch.countDown();
-
-                SensorManager sm = (SensorManager) getSystemService(SENSOR_SERVICE);
-
-                for (StreamRecService.CopyListener l : mSensorListeners)
-                    sm.flush(l);
 
                 mFFmpeg.waitFor();
             } catch (InterruptedException e) {
@@ -328,7 +257,7 @@ public class StreamRecService extends Service {
         }
 
         mFFmpeg = null;
-        notify(false);
+
     }
 
     private int getNumChannels(Sensor s) throws Exception {
@@ -355,118 +284,110 @@ public class StreamRecService extends Service {
         }
     }
 
-    public interface StreamRecServiceListener {
-        // function to notify listeners on stated changed
-        void onStateChanged(State state);
-    }
 
-    private class CopyListener implements SensorEventListener, SensorEventListener2 {
+    // need onSensorChanged else
+    private class CopyListener {
         private final int index;
         private final long mDelayUS;
         private long mSampleCount;
         private long mOffsetUS;
         private final String mName;
 
-        private OutputStream mOut;
+        private OutputStream mOutRot;
+        private OutputStream mOutGyro;
+        private OutputStream mOutAccel;
+        private OutputStream mOutMag;
+        private OutputStream mOutML;
         private ByteBuffer mBuf;
         private long mLastTimestamp = -1;
         private boolean mFlushCompleted = false;
 
         /**
-         * @param i     index
-         * @param rate  frequency in Hz
-         * @param name  name
+         * @param i    index
+         * @param rate frequency in Hz
+         * @param name name
          */
         public CopyListener(int i, double rate, String name) {
             index = i;
-            mOut = null;
+            mOutRot = null;
+            mOutGyro = null;
+            mOutAccel = null;
+            mOutMag = null;
+            mOutML = null;
             mName = name;
             mDelayUS = (long) (1e6 / rate);
             mSampleCount = 0;
             mOffsetUS = 0;
         }
 
-        @Override
-        public void onSensorChanged(SensorEvent sensorEvent) {
+        public void run(DataPipeline.Datapoint dp) {
+
+            // set buffer size for each sensor + ML result
+            ByteBuffer mBufRot = ByteBuffer.allocate(4 * 5);
+            ByteBuffer mBufGyro = ByteBuffer.allocate(4 * 3);
+            ByteBuffer mBufAccel = ByteBuffer.allocate(4 * 3);
+            ByteBuffer mBufMag = ByteBuffer.allocate(4 * 3);
+            ByteBuffer mBufML = ByteBuffer.allocate(4 * 1);
+
+            // check if data pipeline is empty or filed
+            if (dp == null)
+                return;
+
+            // get data from data pipeline
+            float[] rotData = dp.getRotationVectorData();
+            float[] gyroData = dp.getGyroscopeData();
+            float[] accelData = dp.getAccelerometerData();
+            float[] magData = dp.getMagnetometerData();
+            float[] mlData = dp.getMlResult();
+
+            // put data in buffer
+            for (float v : rotData)
+                mBufRot.putFloat(v);
+            for (float v : gyroData)
+                mBufGyro.putFloat(v);
+            for (float v : accelData)
+                mBufAccel.putFloat(v);
+            for (float v : magData)
+                mBufMag.putFloat(v);
+            for (float v : mlData)
+                mBufML.putFloat(v);
+
             try {
-                /*
-                 * wait until the mStartTimeNS is cleared. This will be done by the SyncLockListener
-                 */
-                mSyncLatch.await();
+                //write stream in matroska file
 
-                /*
-                 * if a flush was completed, the sensor process is done, and the recording
-                 * will be stopped. Hence the output channel is closed to let ffmpeg know,
-                 * that the recording is finished. This will then lead to an IOException,
-                 * which cleanly exits the whole process.
-                 */
-                if (mFlushCompleted)
-                    mOut.close();
-
-                /*
-                 *  multiple stream synchronization, wait until a global timestamp was set,
-                 *  and only start pushing events after this timestamp.
-                 */
-                if (sensorEvent.timestamp < mStartTimeNS)
-                    return;
-
-                if (mLastTimestamp != -1)
-                    mOffsetUS += (sensorEvent.timestamp - mLastTimestamp) / 1000;
-                mLastTimestamp = sensorEvent.timestamp;
-
-
-                /*
-                 * create an output buffer, once created only delete the last sample. Insert
-                 * values afterwards.
-                 */
-                if (mBuf == null) {
-                    mBuf = ByteBuffer.allocate(4 * sensorEvent.values.length);
-                    mBuf.order(ByteOrder.nativeOrder());
-                    Log.e("bgrec", String.format("%s started at %d", mName, sensorEvent.timestamp));
-                } else
-                    mBuf.clear();
-
-                /*
-                 * see https://stackoverflow.com/questions/30279065/how-to-get-the-euler-angles-from-the-rotation-vector-sensor-type-rotation-vecto
-                 * https://developer.android.com/reference/android/hardware/SensorEvent#sensor
-                 */
-
-                for (float v : sensorEvent.values)
-                    mBuf.putFloat(v);
-
-                /*
-                 * check whether or not interpolation is required
-                 */
-                if (Math.abs(mOffsetUS) - mDelayUS > mDelayUS)
-                    Log.e("bgrec", String.format(
-                            "sample delay too large %.4f %s", mOffsetUS / 1e6, mName));
-
-                if (mOut == null)
-                    mOut = mFFmpeg.getOutputStream(index);
-
-                if (mOffsetUS < mDelayUS)      // too fast -> remove
-                    return;
-
-                while (mOffsetUS > mDelayUS) { // add new samples, might be too slow
-                    mOut.write(mBuf.array());
-                    mOffsetUS -= mDelayUS;
-                    mSampleCount++;
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                SensorManager sm = (SensorManager) getSystemService(SENSOR_SERVICE);
-                sm.unregisterListener(this);
-                Log.e("bgrec", String.format("%d samples written %s", mSampleCount, mName));
+                if (mOutRot == null)
+                    mOutRot = mFFmpeg.getOutputStream(0);
+                mOutRot.write(mBufRot.array());
+                if (mOutGyro == null)
+                    mOutGyro = mFFmpeg.getOutputStream(1);
+                mOutGyro.write(mBufGyro.array());
+                if (mOutAccel == null)
+                    mOutAccel = mFFmpeg.getOutputStream(2);
+                mOutAccel.write(mBufAccel.array());
+                if (mOutMag == null)
+                    mOutMag = mFFmpeg.getOutputStream(3);
+                mOutMag.write(mBufMag.array());
+                if (mOutML == null)
+                    mOutML = mFFmpeg.getOutputStream(4);
+                mOutML.write(mBufML.array());
+            } catch(Exception e) {
+                Log.e(TAG, "file not found");
             }
-        }
 
-        @Override
-        public void onAccuracyChanged(Sensor sensor, int i) {
-        }
-
-        @Override
-        public void onFlushCompleted(Sensor sensor) {
-            mFlushCompleted = true;
         }
     }
 }
+
+
+/* DataPipeline.Datapoint dp;
+ByteBuffer mBufRot = ByteBuffer.allocate(4 * 5);
+ByteBuffer mBufAccel = ByteBuffer.allocate(4 * 3);
+dp = DataPipeline.getFromFFmpegBuffer();
+if(null == dp) return;
+float[] rotData = dp.getRotationVectorData();
+float[] gyroData = dp.getGyroscopeData();
+for (float v : rotData) mBufRot.putFloat(v);
+for() mOut = mFFmpeg.getOutputStream(indexRotationVector);
+mOut.write(mBufRot.array());
+mOut = mFFmpeg.getOutputStream(indexAccel);
+mOut.write(mBufRot.array()); */
