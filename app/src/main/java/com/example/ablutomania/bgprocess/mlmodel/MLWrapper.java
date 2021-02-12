@@ -27,7 +27,7 @@ public class MLWrapper extends Activity implements Runnable {
     private long mLastTimestamp = -1;
     private boolean bMLprocessing = false;
 
-    /* Mutex for these variables are necessary - Just one thread should process the datas*/
+    /* Mutex for these variables are necessary - Just one thread should process the data*/
     private FIFO<Datapoint> mDpFIFO = new FIFO<>();
     private float[][] mMLInputBuffer = new float[ML_BUFFER_SIZE][13];
     private float[][] mMLOutputBuffer = new float[ML_BUFFER_SIZE][13];

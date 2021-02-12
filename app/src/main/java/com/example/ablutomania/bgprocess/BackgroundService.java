@@ -36,10 +36,9 @@ public class BackgroundService extends Service {
 
         Log.d(TAG, "onStart: " + intent.toString());
 
-        // Create instance and start sensor module
-        //TODO
-        //mStorageModule = new StorageModule((Context)BackgroundService.this , intent);
-        //new Thread(mStorageModule).start();
+        // Create instance and start storage module
+        mStorageModule = new StorageModule((Context)BackgroundService.this , intent);
+        new Thread(String.valueOf(mStorageModule)).start();
 
         // Create instance and start sensor module
         mSensorModule = new SensorModule((Context)BackgroundService.this , intent);
@@ -56,6 +55,6 @@ public class BackgroundService extends Service {
     public void onDestroy() {
         mSensorModule.onDestroy();
         mMLWrapper.onDestroy();
-        // TODO
+        mStorageModule.onDestroy();
     }
 }
