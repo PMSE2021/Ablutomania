@@ -18,7 +18,7 @@ public class BackgroundService extends Service {
 
     private SensorModule mSensorModule;
     private MLWrapper mMLWrapper;
-    private StreamRecService mStreamRecService;
+    private StorageModule mStorageModule;
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -37,10 +37,13 @@ public class BackgroundService extends Service {
         Log.d(TAG, "onStart: " + intent.toString());
 
         // Create instance and start sensor module
+        //TODO
+        //mStorageModule = new StorageModule((Context)BackgroundService.this , intent);
+        //new Thread(mStorageModule).start();
+
+        // Create instance and start sensor module
         mSensorModule = new SensorModule((Context)BackgroundService.this , intent);
         new Thread(mSensorModule).start();
-
-        //TODO: StreamRecService
 
         // Create instance and start thread MLWrapper
         mMLWrapper = new MLWrapper();

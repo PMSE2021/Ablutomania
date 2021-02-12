@@ -302,12 +302,9 @@ public class SensorModule implements Runnable {
                             }
                         }
                         // Add complete datapoint to pipeline
-                        //DataPipeline.put(dp);
-                        if (dp != null)
-                            Log.i(TAG, String.format("Move Datapoint to DataPipeline: " + dp.toString()));
+                        DataPipeline.getInputFIFO().put(dp);
                     } catch (Exception e) {
                         e.printStackTrace();
-
                         Log.e(TAG, String.format("bDataAvailable %d %d %d %d", mFifos.get(0).size(), mFifos.get(1).size(), mFifos.get(2).size(), mFifos.get(3).size()));
                     }
                 }
