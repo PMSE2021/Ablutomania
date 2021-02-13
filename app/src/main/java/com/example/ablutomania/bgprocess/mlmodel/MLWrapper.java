@@ -26,18 +26,18 @@ public class MLWrapper extends Activity implements Runnable {
     private ByteBuffer mBuf;
     private long mLastTimestamp = -1;
     private boolean bMLprocessing = false;
+    private Interpreter interpreter;
 
     /* Mutex for these variables are necessary - Just one thread should process the data*/
     private FIFO<Datapoint> mDpFIFO = new FIFO<>();
-    private float[][] mMLInputBuffer = new float[ML_BUFFER_SIZE][13];
+    private float[][][][] mMLInputBuffer = new float[1][ML_BUFFER_SIZE][13][1];
     private float[][] mMLOutputBuffer = new float[ML_BUFFER_SIZE][13];
 
-    private Interpreter tflite;
 
     public MLWrapper() {
         handler = new Handler(Looper.getMainLooper());
         try {
-            tflite = new Interpreter(loadModelFile());
+            Interpreter interpreter = new Interpreter(loadModelFile());
         } catch (Exception ex){
             ex.printStackTrace();
         }
@@ -84,7 +84,7 @@ public class MLWrapper extends Activity implements Runnable {
                 //at com.example.ablutomania.bgprocess.mlmodel.MLWrapper$1.run(MLWrapper.java:83)
                 //at java.lang.Thread.run(Thread.java:764)
                 try {
-                    tflite.run(mMLInputBuffer, mMLOutputBuffer);
+                    interpreter.run(mMLInputBuffer, mMLOutputBuffer);
                 } catch (NullPointerException e) {
                     Log.e(TAG, e.getMessage());
                 }
@@ -131,16 +131,16 @@ public class MLWrapper extends Activity implements Runnable {
             //extract raw values from datapoint
             int idx = 0;
             for (int i = 0; i < (rotData.length-1) /* TODO: Here are just 4 features? */ ; i++, idx++) {
-                mMLInputBuffer[numSamples][idx] = rotData[i];
+                mMLInputBuffer[1][numSamples][idx][1]= rotData[i];
             }
             for (int i = rotData.length; i < gyroData.length; i++, idx++) {
-                mMLInputBuffer[numSamples][idx] = gyroData[i];
+                mMLInputBuffer[1][numSamples][idx][1] = gyroData[i];
             }
             for (int i = 0; i < accelData.length; i++, idx++) {
-                mMLInputBuffer[numSamples][idx] = accelData[i];
+                mMLInputBuffer[1][numSamples][idx][1] = accelData[i];
             }
             for (int i = 0; i < magData.length; i++, idx++) {
-                mMLInputBuffer[numSamples][idx] = magData[i];
+                mMLInputBuffer[1][numSamples][idx][1] = magData[i];
             }
             numSamples++;
 
