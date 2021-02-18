@@ -10,6 +10,7 @@ import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.StatFs;
 import android.provider.Settings;
 import android.util.Log;
 
@@ -182,6 +183,19 @@ public class StorageModule implements Runnable{
     @Override
     public void run() {
 
+        //check, if watch is charging
+        /*if (isCharging(ctx) = true) {
+            Log.i(TAG, "Charging device");
+            return;
+        }*/
+
+        //check, if free memory < 5 MB: error (1 min = 0.18 MB; 1 h = 11 MB)
+        if (freeStorage() < 5) {
+            Log.e(TAG, "no free storage space available");
+            notify("You ran out of free storage");
+        }
+
+
         handler.postDelayed(this, (long) (1e3 / RATE));
 
         Datapoint dp;
@@ -212,7 +226,7 @@ public class StorageModule implements Runnable{
             float[] magData = dp.getMagnetometerData();
             float[] mlData = dp.getMlResult();
 
-            // put data in buffer
+            /*// put data in buffer
             for (float v : rotData)
                 mBufRot.putFloat(v);
             for (float v : gyroData)
@@ -224,10 +238,11 @@ public class StorageModule implements Runnable{
             for (float v : mlData)
                 mBufML.putFloat(v);
 
+             */
+
             try {
                 //write stream in matroska file
-
-                if (mOutRot == null)
+                /*if (mOutRot == null)
                     mOutRot = mFFmpeg.getOutputStream(0);
                 mOutRot.write(mBufRot.array());
                 if (mOutGyro == null)
@@ -242,6 +257,8 @@ public class StorageModule implements Runnable{
                 if (mOutML == null)
                     mOutML = mFFmpeg.getOutputStream(4);
                 mOutML.write(mBufML.array());
+
+                 */
                 maxDatapoint--;
             } catch(Exception e) {
                 Log.e(TAG, "file not found");
@@ -249,5 +266,24 @@ public class StorageModule implements Runnable{
             }
         }while ((maxDatapoint > 0) && (mOutputFIFO.size() > 0));
     }
+
+    //get free storage in MB
+    public float freeStorage(){
+        StatFs statFs = new StatFs(Environment.getRootDirectory().getAbsolutePath());
+        float free = (float) ((statFs.getAvailableBlocksLong() * statFs.getBlockSizeLong()) / 1e6);
+        return free;
+    }
+
+    /*public static boolean isCharging(Context context) {
+
+        //Determine the current charging state
+        IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+        Intent batteryStatus = context.registerReceiver(null, ifilter);
+
+        // Are we charging?
+        int status = batteryStatus.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+
+        return status == BatteryManager.BATTERY_STATUS_CHARGING;
+    }*/
 }
 
