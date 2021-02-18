@@ -3,7 +3,6 @@ package com.example.ablutomania.bgprocess;
 import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.content.Context;
-import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorManager;
 import android.os.Build;
@@ -35,6 +34,7 @@ public class StorageModule implements Runnable{
     private static final String CHANID = "StorageModuleNotification";
     private static final String TAG = "StorageModule";
     private static final String VERSION = "1.0";
+    private long mLastTimestamp = -1;
     private FFMpegProcess mFFmpeg;
     private final Context ctx;
     private Handler handler;
@@ -65,7 +65,7 @@ public class StorageModule implements Runnable{
         return df.format(new Date()) + "_Ablutomania_" + aid + ".mkv";
     }
 
-    public StorageModule(Context context, Intent intent) {
+    public StorageModule(Context context) {
         ctx = context;
         handler = new Handler(Looper.getMainLooper());
 
@@ -182,6 +182,7 @@ public class StorageModule implements Runnable{
 
     @Override
     public void run() {
+        // TODO: Function is now called cyclic, but not in the specified period
 
         //check, if watch is charging
         /*if (isCharging(ctx) = true) {
@@ -197,6 +198,17 @@ public class StorageModule implements Runnable{
 
 
         handler.postDelayed(this, (long) (1e3 / RATE));
+
+        long mOffset = 0;
+        if (mLastTimestamp == -1) {
+            mLastTimestamp = System.currentTimeMillis();
+        } else {
+            long t = System.currentTimeMillis();
+            mOffset = t - mLastTimestamp;
+            mLastTimestamp = t;
+        }
+
+        Log.d(TAG, String.format("running: offset = %dms", mOffset));
 
         Datapoint dp;
         FIFO<Datapoint> mOutputFIFO = DataPipeline.getOutputFIFO();
@@ -226,7 +238,7 @@ public class StorageModule implements Runnable{
             float[] magData = dp.getMagnetometerData();
             float[] mlData = dp.getMlResult();
 
-            /*// put data in buffer
+            // put data in buffer
             for (float v : rotData)
                 mBufRot.putFloat(v);
             for (float v : gyroData)
@@ -238,11 +250,10 @@ public class StorageModule implements Runnable{
             for (float v : mlData)
                 mBufML.putFloat(v);
 
-             */
-
             try {
                 //write stream in matroska file
-                /*if (mOutRot == null)
+                /* TODO: Something is wrong in following code
+                if (mOutRot == null)
                     mOutRot = mFFmpeg.getOutputStream(0);
                 mOutRot.write(mBufRot.array());
                 if (mOutGyro == null)
@@ -257,14 +268,21 @@ public class StorageModule implements Runnable{
                 if (mOutML == null)
                     mOutML = mFFmpeg.getOutputStream(4);
                 mOutML.write(mBufML.array());
+                */
 
-                 */
+                // Clear buffers
+                mBufRot.clear();
+                mBufGyro.clear();
+                mBufAccel.clear();
+                mBufMag.clear();
+                mBufML.clear();
+
                 maxDatapoint--;
             } catch(Exception e) {
                 Log.e(TAG, "file not found");
                 notify("output stream not found");
             }
-        }while ((maxDatapoint > 0) && (mOutputFIFO.size() > 0));
+        } while ((maxDatapoint > 0) && (mOutputFIFO.size() > 0));
     }
 
     //get free storage in MB

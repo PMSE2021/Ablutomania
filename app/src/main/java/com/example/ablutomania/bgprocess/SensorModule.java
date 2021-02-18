@@ -109,7 +109,7 @@ public class SensorModule implements Runnable {
 
     @Override
     public void run() {
-        // TODO: Function is now called cyclic, but not in a period of 10ms
+        // TODO: Function is now called cyclic, but not in the specified period
         handler.postDelayed(this, (long) (1e3 / RATE));
 
         long mOffset = 0;
@@ -272,7 +272,7 @@ public class SensorModule implements Runnable {
                     }
                 }
 
-                Log.i(TAG, String.format("fifo list %d %d %d %d", mFifos.get(0).size(), mFifos.get(1).size(), mFifos.get(2).size(), mFifos.get(3).size()));
+                Log.i(TAG, String.format("FIFO lists: %d %d %d %d", mFifos.get(0).size(), mFifos.get(1).size(), mFifos.get(2).size(), mFifos.get(3).size()));
 
                 if (bDpAvailable) {
                     try {

@@ -13,6 +13,6 @@ public class DataPipeline {
     }
 
     public static FIFO<Datapoint> getOutputFIFO() {
-        return mInputFIFO;
+        return mOutputFIFO;
     }
 }

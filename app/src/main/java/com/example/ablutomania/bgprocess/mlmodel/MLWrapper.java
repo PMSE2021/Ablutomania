@@ -30,7 +30,7 @@ public class MLWrapper extends Activity implements Runnable {
 
     /* Mutex for these variables are necessary - Just one thread should process the data*/
     private FIFO<Datapoint> mDpFIFO = new FIFO<>();
-    private float[][][][] mMLInputBuffer = new float[1][ML_BUFFER_SIZE][13][1];
+    private float[][] mMLInputBuffer = new float[ML_BUFFER_SIZE][13];
     private float[][] mMLOutputBuffer = new float[ML_BUFFER_SIZE][13];
 
 
@@ -45,6 +45,7 @@ public class MLWrapper extends Activity implements Runnable {
 
     @Override
     public void run() {
+        // TODO: Function is now called cyclic, but not in the specified period
         handler.postDelayed(this, (long) (1e3 / RATE));
 
         long mOffset = 0;
@@ -131,16 +132,16 @@ public class MLWrapper extends Activity implements Runnable {
             //extract raw values from datapoint
             int idx = 0;
             for (int i = 0; i < (rotData.length-1) /* TODO: Here are just 4 features? */ ; i++, idx++) {
-                mMLInputBuffer[1][numSamples][idx][1]= rotData[i];
+                mMLInputBuffer[numSamples][idx]= rotData[i];
             }
             for (int i = rotData.length; i < gyroData.length; i++, idx++) {
-                mMLInputBuffer[1][numSamples][idx][1] = gyroData[i];
+                mMLInputBuffer[numSamples][idx] = gyroData[i];
             }
             for (int i = 0; i < accelData.length; i++, idx++) {
-                mMLInputBuffer[1][numSamples][idx][1] = accelData[i];
+                mMLInputBuffer[numSamples][idx] = accelData[i];
             }
             for (int i = 0; i < magData.length; i++, idx++) {
-                mMLInputBuffer[1][numSamples][idx][1] = magData[i];
+                mMLInputBuffer[numSamples][idx] = magData[i];
             }
             numSamples++;
 
@@ -159,6 +160,7 @@ public class MLWrapper extends Activity implements Runnable {
                 continue;   //If datapoint is null, proceeed with next one
 
             //TODO: Add MLResult {-1, 0, 1} to specific datapoint
+            dp.setMlResult(new float[]{0});
             mOutputFifo.put(dp);
 
             Log.i(TAG, String.format("OutputFIFO size: %d", mOutputFifo.size()));
