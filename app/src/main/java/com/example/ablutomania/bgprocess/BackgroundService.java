@@ -4,7 +4,6 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.os.IBinder;
-import android.util.Log;
 
 import com.example.ablutomania.bgprocess.mlmodel.MLWrapper;
 
@@ -34,11 +33,11 @@ public class BackgroundService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
 
-        Log.d(TAG, "onStart: " + intent.toString());
+//        Log.d(TAG, "onStart: " + intent.toString());
 
         // Create instance and start storage module
-        mStorageModule = new StorageModule((Context)BackgroundService.this , intent);
-        new Thread(String.valueOf(mStorageModule)).start();
+        mStorageModule = new StorageModule((Context)BackgroundService.this);
+        new Thread(mStorageModule).start();
 
         // Create instance and start sensor module
         mSensorModule = new SensorModule((Context)BackgroundService.this , intent);
