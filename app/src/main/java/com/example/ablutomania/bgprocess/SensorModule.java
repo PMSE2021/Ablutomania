@@ -20,8 +20,6 @@ import com.example.ablutomania.R;
 import com.example.ablutomania.bgprocess.types.Datapoint;
 import com.example.ablutomania.bgprocess.types.FIFO;
 
-import java.io.OutputStream;
-import java.nio.ByteBuffer;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -240,7 +238,7 @@ public class SensorModule implements Runnable {
             int delay = s.isWakeUpSensor() ? s.getFifoMaxEventCount() / 2 * us : 1;
             sm.registerListener(l, s, us, delay, h);
             mSensorListeners.add(l);
-            mFifos.add(new FIFO<float[]>());
+            mFifos.add(new FIFO<>());
         }
     }
 
@@ -264,6 +262,7 @@ public class SensorModule implements Runnable {
             boolean bDpAvailable;
 
             do {
+                String sLog;
                 bDpAvailable = true;
 
                 for (FIFO<float[]> list : mFifos) {
@@ -272,7 +271,10 @@ public class SensorModule implements Runnable {
                     }
                 }
 
-                Log.i(TAG, String.format("FIFO lists: %d %d %d %d", mFifos.get(0).size(), mFifos.get(1).size(), mFifos.get(2).size(), mFifos.get(3).size()));
+                sLog = "FIFO lists:";
+                for (FIFO f : mFifos)
+                    sLog += String.format(" %d", f.size());
+                Log.i(TAG, sLog);
 
                 if (bDpAvailable) {
                     try {
@@ -305,7 +307,10 @@ public class SensorModule implements Runnable {
                         DataPipeline.getInputFIFO().put(dp);
                     } catch (Exception e) {
                         e.printStackTrace();
-                        Log.e(TAG, String.format("bDataAvailable %d %d %d %d", mFifos.get(0).size(), mFifos.get(1).size(), mFifos.get(2).size(), mFifos.get(3).size()));
+                        sLog = "Exception in bDataAvailable: ";
+                        for (FIFO f : mFifos)
+                            sLog += String.format(" %d", f.size());
+                        Log.e(TAG, sLog);
                     }
                 }
             } while (bDpAvailable);
@@ -319,11 +324,7 @@ public class SensorModule implements Runnable {
         private long mOffsetUS;
         private final String mName;
 
-        private ByteBuffer mBufOut;
-        private OutputStream mOut;
-        private ByteBuffer mBuf;
         private long mLastTimestamp = -1;
-        private boolean mFlushCompleted = false;
 
         /**
          * @param i     index
@@ -332,8 +333,6 @@ public class SensorModule implements Runnable {
          */
         public CopyListener(int i, double rate, String name) {
             index = i;
-            mBufOut = null;
-            mOut = null;
             mName = name;
             mDelayUS = (long) (1e6 / rate);
             mSampleCount = 0;
@@ -347,15 +346,6 @@ public class SensorModule implements Runnable {
                  * wait until the mStartTimeNS is cleared. This will be done by the SyncLockListener
                  */
                 mSyncLatch.await();
-
-                /*
-                 * if a flush was completed, the sensor process is done, and the recording
-                 * will be stopped. Hence the output channel is closed to let ffmpeg know,
-                 * that the recording is finished. This will then lead to an IOException,
-                 * which cleanly exits the whole process.
-                 */
-                if (mFlushCompleted)
-                    mOut.close();
 
                 /*
                  *  multiple stream synchronization, wait until a global timestamp was set,
@@ -373,8 +363,8 @@ public class SensorModule implements Runnable {
                 /*
                  *    Uncomment following to lines to allow debugging of sensor delay over time by logcat.
                  */
-                String logText = String.format("logSampleDelay %.4f|%.4f|%d|%s", sensorDelay / 1e6, mOffsetUS / 1e6, mLastTimestamp, mName);
-                Log.i(TAG,logText);
+                //String logText = String.format("logSampleDelay %.4f|%.4f|%d|%s", sensorDelay / 1e6, mOffsetUS / 1e6, mLastTimestamp, mName);
+                //Log.i(TAG,logText);
 
                 /*
                  * check whether or not interpolation is required
@@ -386,7 +376,7 @@ public class SensorModule implements Runnable {
                 if (mOffsetUS < mDelayUS)      // too fast -> remove
                     return;
 
-                while (mOffsetUS > mDelayUS) { // add new samples, might be too slow
+                while (mOffsetUS >= mDelayUS) { // add new samples, might be too slow
                     synchronized (SensorModule.this) {
                         mFifos.get(index).put(sensorEvent.values);
                     }
@@ -408,7 +398,6 @@ public class SensorModule implements Runnable {
 
         @Override
         public void onFlushCompleted(Sensor sensor) {
-            mFlushCompleted = true;
         }
     }
 }

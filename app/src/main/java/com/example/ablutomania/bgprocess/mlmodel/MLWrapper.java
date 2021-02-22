@@ -37,7 +37,13 @@ public class MLWrapper extends Activity implements Runnable {
     public MLWrapper() {
         handler = new Handler(Looper.getMainLooper());
         try {
-            Interpreter interpreter = new Interpreter(loadModelFile());
+            //TODO: Following exception is thrown here:
+            //System.err: java.lang.NullPointerException: Attempt to invoke virtual method 'android.content.res.Resources android.content.Context.getResources()' on a null object reference
+            try {
+                Interpreter interpreter = new Interpreter(loadModelFile());
+            } catch (NullPointerException e) {
+                Log.e(TAG, e.getMessage());
+            }
         } catch (Exception ex){
             ex.printStackTrace();
         }
@@ -127,24 +133,27 @@ public class MLWrapper extends Activity implements Runnable {
             float[] gyroData = dp.getGyroscopeData();
             float[] accelData = dp.getAccelerometerData();
             float[] magData = dp.getMagnetometerData();
-            float[] mlData = dp.getMlResult();
 
             //extract raw values from datapoint
             int idx = 0;
-            for (int i = 0; i < (rotData.length-1) /* TODO: Here are just 4 features? */ ; i++, idx++) {
-                mMLInputBuffer[numSamples][idx]= rotData[i];
-            }
-            for (int i = rotData.length; i < gyroData.length; i++, idx++) {
-                mMLInputBuffer[numSamples][idx] = gyroData[i];
-            }
-            for (int i = 0; i < accelData.length; i++, idx++) {
-                mMLInputBuffer[numSamples][idx] = accelData[i];
-            }
-            for (int i = 0; i < magData.length; i++, idx++) {
-                mMLInputBuffer[numSamples][idx] = magData[i];
-            }
-            numSamples++;
 
+            if(null != rotData)
+                for (int i = 0; i < (rotData.length - 1) /* TODO: Here are just 4 features? */ ; i++, idx++)
+                    mMLInputBuffer[numSamples][idx] = rotData[i];
+
+            if(null != gyroData)
+                for (int i = 0; i < gyroData.length; i++, idx++)
+                    mMLInputBuffer[numSamples][idx] = gyroData[i];
+
+            if(null != accelData)
+                for (int i = 0; i < accelData.length; i++, idx++)
+                    mMLInputBuffer[numSamples][idx] = accelData[i];
+
+            if(null != magData)
+                for (int i = 0; i < magData.length; i++, idx++)
+                    mMLInputBuffer[numSamples][idx] = magData[i];
+
+            numSamples++;
         } while(numSamples < ML_BUFFER_SIZE);
     }
 
