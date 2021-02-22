@@ -239,20 +239,31 @@ public class StorageModule implements Runnable{
             float[] mlData = dp.getMlResult();
 
             // put data in buffer
-            for (float v : rotData)
-                mBufRot.putFloat(v);
-            for (float v : gyroData)
-                mBufGyro.putFloat(v);
-            for (float v : accelData)
-                mBufAccel.putFloat(v);
-            for (float v : magData)
-                mBufMag.putFloat(v);
-            for (float v : mlData)
-                mBufML.putFloat(v);
+            if(rotData != null){
+                for (float v : rotData)
+                    mBufRot.putFloat(v);
+            }
+            if (gyroData != null){
+                for (float v : gyroData)
+                    mBufGyro.putFloat(v);
+            }
+            if(accelData != null){
+                for (float v : accelData)
+                    mBufAccel.putFloat(v);
+            }
+            if (magData != null){
+                for (float v : magData)
+                    mBufMag.putFloat(v);
+            }
+            if (mlData != null){
+                for (float v : mlData)
+                    mBufML.putFloat(v);
+            }
+
 
             try {
                 //write stream in matroska file
-                /* TODO: Something is wrong in following code
+                // TODO: Something is wrong in following code
                 if (mOutRot == null)
                     mOutRot = mFFmpeg.getOutputStream(0);
                 mOutRot.write(mBufRot.array());
@@ -268,7 +279,7 @@ public class StorageModule implements Runnable{
                 if (mOutML == null)
                     mOutML = mFFmpeg.getOutputStream(4);
                 mOutML.write(mBufML.array());
-                */
+
 
                 // Clear buffers
                 mBufRot.clear();

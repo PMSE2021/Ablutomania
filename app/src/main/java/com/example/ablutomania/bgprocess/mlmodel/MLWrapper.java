@@ -129,20 +129,35 @@ public class MLWrapper extends Activity implements Runnable {
             float[] magData = dp.getMagnetometerData();
             float[] mlData = dp.getMlResult();
 
+
+
             //extract raw values from datapoint
             int idx = 0;
-            for (int i = 0; i < (rotData.length-1) /* TODO: Here are just 4 features? */ ; i++, idx++) {
-                mMLInputBuffer[numSamples][idx]= rotData[i];
+            if(rotData != null){
+                for (int i = 0; i < (rotData.length-1) /* TODO: Here are just 4 features? */ ; i++, idx++) {
+                    mMLInputBuffer[numSamples][idx]= rotData[i];
+                }
             }
-            for (int i = rotData.length; i < gyroData.length; i++, idx++) {
-                mMLInputBuffer[numSamples][idx] = gyroData[i];
+            if(gyroData != null){
+                //transform null to empty
+                if (rotData == null){
+                    rotData = new float[0];
+                }
+                for (int i = rotData.length; i < gyroData.length; i++, idx++) {
+                    mMLInputBuffer[numSamples][idx] = gyroData[i];
+                }
             }
-            for (int i = 0; i < accelData.length; i++, idx++) {
-                mMLInputBuffer[numSamples][idx] = accelData[i];
+            if(accelData != null){
+                for (int i = 0; i < accelData.length; i++, idx++) {
+                    mMLInputBuffer[numSamples][idx] = accelData[i];
+                }
             }
-            for (int i = 0; i < magData.length; i++, idx++) {
-                mMLInputBuffer[numSamples][idx] = magData[i];
+            if (magData != null){
+                for (int i = 0; i < magData.length; i++, idx++) {
+                    mMLInputBuffer[numSamples][idx] = magData[i];
+                }
             }
+
             numSamples++;
 
         } while(numSamples < ML_BUFFER_SIZE);

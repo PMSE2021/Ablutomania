@@ -272,7 +272,7 @@ public class SensorModule implements Runnable {
                     }
                 }
 
-                Log.i(TAG, String.format("FIFO lists: %d %d %d %d", mFifos.get(0).size(), mFifos.get(1).size(), mFifos.get(2).size(), mFifos.get(3).size()));
+                Log.i(TAG, String.format("FIFO lists: %d %d", mFifos.get(0).size(), mFifos.get(1).size())); //, mFifos.get(2).size(), mFifos.get(3).size()));
 
                 if (bDpAvailable) {
                     try {
@@ -305,7 +305,7 @@ public class SensorModule implements Runnable {
                         DataPipeline.getInputFIFO().put(dp);
                     } catch (Exception e) {
                         e.printStackTrace();
-                        Log.e(TAG, String.format("bDataAvailable %d %d %d %d", mFifos.get(0).size(), mFifos.get(1).size(), mFifos.get(2).size(), mFifos.get(3).size()));
+                        Log.e(TAG, String.format("bDataAvailable %d %d", mFifos.get(0).size(), mFifos.get(1).size())); //, mFifos.get(2).size(), mFifos.get(3).size()));
                     }
                 }
             } while (bDpAvailable);
