@@ -3,6 +3,7 @@ package com.example.ablutomania;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 
 import androidx.annotation.Nullable;
@@ -33,6 +34,19 @@ public class MainActivity extends Activity /* implements RecorderService.Recorde
             @Override
             public void onClick(View v) { finish(); }
         });
+
+        getUserFeedback();
+    }
+
+    void getUserFeedback() {
+        Intent intent = new Intent(this, YesNoDialog.class);
+        intent.putExtra("question", getString(R.string.ml_user_feedback));
+        startActivityForResult(intent, 0);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        Log.d(TAG, "User response: " + data.getBooleanExtra("answer", false));
     }
 
     @Override
