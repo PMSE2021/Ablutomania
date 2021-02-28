@@ -1,11 +1,16 @@
 package com.example.ablutomania;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.View;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.example.ablutomania.bgprocess.BackgroundService;
 
@@ -14,8 +19,9 @@ import com.example.ablutomania.bgprocess.BackgroundService;
 public class MainActivity extends Activity /* implements RecorderService.RecorderServiceListener */ {
 
     private static final String TAG = MainActivity.class.getName();
+    private static final String EXT_STORAGE = Manifest.permission.WRITE_EXTERNAL_STORAGE;
+    private static final int PERMISSION_REQUEST_ID = 0xeffe;
 
-   // Interpreter tflite;
     private static Intent intentRecorder = null;
 
     @Override
@@ -23,6 +29,35 @@ public class MainActivity extends Activity /* implements RecorderService.Recorde
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        /** ask for runtime permission to save file on sdcard */
+        if (!allowed(EXT_STORAGE))
+            reqPerm(EXT_STORAGE);
+        else {
+            initApp();
+
+    /*        new Handler().post(new Runnable() {
+                @Override
+                public void run() {
+                    finish();
+                }
+            }); */
+        }
+
+/*
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Intent intent = new Intent();
+            String packageName = getPackageName();
+            PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+            if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+                intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                intent.setData(Uri.parse("package:" + packageName));
+                startActivity(intent);
+            }
+        }
+ */
+    }
+
+    private void initApp() {
         if(intentRecorder == null) {
             intentRecorder = new Intent(this, BackgroundService.class);
             startService(intentRecorder);
@@ -40,31 +75,30 @@ public class MainActivity extends Activity /* implements RecorderService.Recorde
         super.onDestroy();
     }
 
-/*
-    public float doInference(String inputString) {
-        //Input shape is ???
-        float[] inputVal = new float[1];
-        inputVal[0] = Float.valueOf(inputString);
+    /**
+     * down here is only permission handling stuff
+     */
 
-        //Output shape is [1][3]
-        float[][] outputval = new float[1][3];
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        if (requestCode != PERMISSION_REQUEST_ID)
+            return;
 
-        // Run interference passing the input shape & getting the output shape
-        tflite.run(inputVal, outputval);
-        // Inferred value is at [0][0]
-        float inferredValue = outputval[0][0];
+        if (grantResults[0] != PackageManager.PERMISSION_GRANTED)
+            return;
 
-        return inferredValue;
-
+        initApp();
     }
 
-    private MappedByteBuffer loadModelFile() throws IOException {
-        AssetFileDescriptor fileDescriptor = this.getAssets().openFd("CNN_model_ablutomania-20-1 IH.tflite");
-        FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
-        FileChannel fileChannel = inputStream.getChannel();
-        long startOffset = fileDescriptor.getDeclaredLength();
-        long declaredLength = fileDescriptor.getDeclaredLength();
-        return fileChannel.map(FileChannel.MapMode.READ_ONLY,startOffset,declaredLength);
-    }*/
+    private boolean allowed(String perm) {
+        return ContextCompat.checkSelfPermission(this,perm)
+                == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void reqPerm(String perm) {
+        ActivityCompat.requestPermissions(this,
+                new String[]{perm},
+                PERMISSION_REQUEST_ID);
+    }
 }
 
