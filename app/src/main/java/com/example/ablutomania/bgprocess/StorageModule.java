@@ -75,7 +75,6 @@ public class StorageModule implements Runnable{
         mOutMag = null;
         mOutML = null;
 
-
         try{
             initFFMPEG();
         }catch(Exception e){
@@ -119,7 +118,6 @@ public class StorageModule implements Runnable{
             if (s != null)
                 sensors.add(s);
         }
-
         /*
          * build and start the ffmpeg process, which transcodes into a matroska file.
          */
@@ -137,6 +135,9 @@ public class StorageModule implements Runnable{
             b
                     .addAudio(format, RATE, getNumChannels(s))
                     .setStreamTag("name", s.getName());
+
+        b.addAudio(format, RATE, 1 )
+                .setStreamTag("name", "mlResult");
 
 
         mFFmpeg = b.build();
@@ -215,8 +216,8 @@ public class StorageModule implements Runnable{
 
         // set buffer size for each sensor + ML result
         ByteBuffer mBufRot = ByteBuffer.allocate(4 * 5);
-        ByteBuffer mBufGyro = ByteBuffer.allocate(4 * 3);
         ByteBuffer mBufAccel = ByteBuffer.allocate(4 * 3);
+        ByteBuffer mBufGyro = ByteBuffer.allocate(4 * 3);
         ByteBuffer mBufMag = ByteBuffer.allocate(4 * 3);
         ByteBuffer mBufML = ByteBuffer.allocate(4 * 1);
 
@@ -228,13 +229,14 @@ public class StorageModule implements Runnable{
             dp = mOutputFIFO.get();
 
             // check if data pipeline is empty or filed
-            if (dp == null)
+            if (dp == null) {
                 return;
+            }
 
             // get data from data pipeline
             float[] rotData = dp.getRotationVectorData();
-            float[] gyroData = dp.getGyroscopeData();
             float[] accelData = dp.getAccelerometerData();
+            float[] gyroData = dp.getGyroscopeData();
             float[] magData = dp.getMagnetometerData();
             float[] mlData = dp.getMlResult();
 
@@ -243,13 +245,13 @@ public class StorageModule implements Runnable{
                 for (float v : rotData)
                     mBufRot.putFloat(v);
             }
-            if (gyroData != null){
-                for (float v : gyroData)
-                    mBufGyro.putFloat(v);
-            }
             if(accelData != null){
                 for (float v : accelData)
                     mBufAccel.putFloat(v);
+            }
+            if (gyroData != null){
+                for (float v : gyroData)
+                    mBufGyro.putFloat(v);
             }
             if (magData != null){
                 for (float v : magData)
@@ -264,21 +266,26 @@ public class StorageModule implements Runnable{
             try {
                 //write stream in matroska file
                 // TODO: Something is wrong in following code
-                if (mOutRot == null)
+                /*if (mOutRot == null)
                     mOutRot = mFFmpeg.getOutputStream(0);
-                mOutRot.write(mBufRot.array());
+                mOutRot.write(mBufRot.array()); */
+                /*if (mOutAccel == null)
+                    mOutAccel = mFFmpeg.getOutputStream(0);
+                mOutAccel.write(mBufAccel.array());*/
                 if (mOutGyro == null)
+                    Log.e(TAG, "try to get output stream");
                     mOutGyro = mFFmpeg.getOutputStream(1);
+                    Log.e(TAG, "got output stream");
                 mOutGyro.write(mBufGyro.array());
-                if (mOutAccel == null)
-                    mOutAccel = mFFmpeg.getOutputStream(2);
-                mOutAccel.write(mBufAccel.array());
-                if (mOutMag == null)
+                Log.e(TAG, "write datastream");
+                /*if (mOutMag == null)
                     mOutMag = mFFmpeg.getOutputStream(3);
                 mOutMag.write(mBufMag.array());
                 if (mOutML == null)
                     mOutML = mFFmpeg.getOutputStream(4);
                 mOutML.write(mBufML.array());
+
+                 */
 
 
                 // Clear buffers

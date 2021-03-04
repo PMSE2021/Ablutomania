@@ -286,7 +286,7 @@ public class FFMpegProcess {
             //    throw new IOException("mknod failed");
 
             /* open and store for later use */
-            //f = new File(f.getAbsolutePath());
+            f = new File(f.getAbsolutePath());
             f.deleteOnExit();
             mInputPipes.add( f );
             numinputs ++;

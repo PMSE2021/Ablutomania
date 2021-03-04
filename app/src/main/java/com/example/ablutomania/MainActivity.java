@@ -89,6 +89,8 @@ public class MainActivity extends Activity /* implements RecorderService.Recorde
         super.onDestroy();
     }
 
+
+
     /**
      * down here is only permission handling stuff
      */
