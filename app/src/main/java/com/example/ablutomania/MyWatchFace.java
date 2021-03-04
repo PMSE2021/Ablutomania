@@ -284,19 +284,20 @@ public class MyWatchFace extends CanvasWatchFaceService {
                     mCalendar.get(Calendar.MINUTE), mCalendar.get(Calendar.SECOND));
             canvas.drawText(text, mXOffset, mYOffset, mTextPaint);
 
-            if (SystemStatus.OK = true) {
-                String statusOK = "OK";
-                canvas.drawText(statusOK, mXOffsetStatus, mYOffsetStatus, mStatusOKPaint);
+            switch (SystemStatus.GetInstance().getStatus()) {
+                case SystemStatus.Status.OK:
+                    String statusOK = "OK";
+                    canvas.drawText(statusOK, mXOffsetStatus, mYOffsetStatus, mStatusOKPaint);
+                    break;
+                case SystemStatus.Status.WARNING:
+                    String statusWarning = "Warning";
+                    canvas.drawText(statusWarning, mXOffsetStatus, mYOffsetStatus, mStatusWarningPaint);
+                    break;
+                case SystemStatus.Status.ERROR:
+                    String statusError = "Error";
+                    canvas.drawText(statusError, mXOffsetStatus, mYOffsetStatus, mStatusErrorPaint);
+                    break;
             }
-            else if (SystemStatus.warning = true) {
-                String statusWarning = "Warning";
-                canvas.drawText(statusWarning, mXOffsetStatus, mYOffsetStatus, mStatusWarningPaint);
-            }
-            else if (SystemStatus.error = true) {
-                String statusError = "Error";
-                canvas.drawText(statusError, mXOffsetStatus, mYOffsetStatus, mStatusErrorPaint);
-            }
-
         }
 
         /**

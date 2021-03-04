@@ -14,6 +14,7 @@ import android.provider.Settings;
 import android.util.Log;
 
 import com.example.ablutomania.CustomNotification;
+import com.example.ablutomania.SystemStatus;
 import com.example.ablutomania.bgprocess.ffmpeg.FFMpegProcess;
 import com.example.ablutomania.bgprocess.types.Datapoint;
 import com.example.ablutomania.bgprocess.types.FIFO;
@@ -80,6 +81,7 @@ public class StorageModule implements Runnable{
         }catch(Exception e){
             Log.e(TAG, e.getMessage());
             notify("FFMPEG initialisation failed");
+            SystemStatus.GetInstance().setStatusError();
         }
     }
 
