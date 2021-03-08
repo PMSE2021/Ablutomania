@@ -8,6 +8,7 @@ import android.hardware.SensorManager;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
@@ -30,18 +31,22 @@ import java.util.TimeZone;
 public class StorageModule implements Runnable{
 
     private static final double RATE = 50.;
+    private static final int SIZE_OF_FLOAT = 4; // 4 bytes
     private static final String CHANID = "StorageModuleNotification";
     private static final String TAG = "StorageModule";
     private static final String VERSION = "1.0";
-    private long mLastTimestamp = -1;
     private FFMpegProcess mFFmpeg;
     private final Context ctx;
     private Handler handler;
-    private OutputStream mOutRot;
-    private OutputStream mOutGyro;
-    private OutputStream mOutAccel;
-    private OutputStream mOutMag;
-    private OutputStream mOutML;
+    private LinkedList<CopyListener> mOutputStreamListeners = new LinkedList<>();
+
+    /* I would rather like to use enum with ordinal(), but this isn't
+       recommend in java. So let's do it this (ugly) way. */
+    private static final int STREAMTYPE_ROTATION_VECTOR = 0;
+    private static final int STREAMTYPE_ACCELEROMETER   = 1;
+    private static final int STREAMTYPE_GYROSCOPE       = 2;
+    private static final int STREAMTYPE_MAGNETIC_FIELD  = 3;
+    private static final int STREAMTYPE_ML_RESULT       = 4;
 
     public static String getCurrentDateAsIso() {
         // see https://stackoverflow.com/questions/3914404/how-to-get-current-moment-in-iso-8601-format
@@ -68,19 +73,13 @@ public class StorageModule implements Runnable{
         ctx = context;
         handler = new Handler(Looper.getMainLooper());
 
-        mOutRot = null;
-        mOutGyro = null;
-        mOutAccel = null;
-        mOutMag = null;
-        mOutML = null;
-
-
-        try{
+        try {
             initFFMPEG();
-        }catch(Exception e){
+        } catch (Exception e) {
             Log.e(TAG, e.getMessage());
             notify("FFMPEG initialisation failed");
         }
+
     }
 
     private Notification notify(String notification) {
@@ -100,24 +99,45 @@ public class StorageModule implements Runnable{
          *  sensors first. Terminate if there is no wakeup supported (otherwise a wake-lock would
          *  be required). Then get all sensors as non-wakeups and select only those that are there.
          */
-        final SensorManager sm = (SensorManager) ctx.getSystemService(Context.SENSOR_SERVICE);
-        int[] types = {
-                Sensor.TYPE_ROTATION_VECTOR,
-                Sensor.TYPE_ACCELEROMETER,
-                Sensor.TYPE_GYROSCOPE,
-                Sensor.TYPE_MAGNETIC_FIELD
+        class StreamConfig {
+            public int mSensorType;
+            public int mStreamType;
+            public String mName;
+
+            public StreamConfig(int sensorType, int streamType, String name) {
+                mSensorType = sensorType;
+                mStreamType = streamType;
+                mName = name;
+            }
         };
-        LinkedList<Sensor> sensors = new LinkedList<>();
 
-        for (int type : types) {
-            Sensor s = sm.getDefaultSensor(type, true);
+        final SensorManager sm = (SensorManager) ctx.getSystemService(Context.SENSOR_SERVICE);
+        StreamConfig[] sConfig = {
+                new StreamConfig( Sensor.TYPE_ROTATION_VECTOR,  STREAMTYPE_ROTATION_VECTOR  , "ROTATION_VECTOR_SENSOR"  ),
+                new StreamConfig( Sensor.TYPE_ACCELEROMETER,    STREAMTYPE_ACCELEROMETER    , "ACCELEROMETER_SENSOR"    ),
+                new StreamConfig( Sensor.TYPE_GYROSCOPE,        STREAMTYPE_GYROSCOPE        , "GYROSCOPE_SENSOR"        ),
+                new StreamConfig( Sensor.TYPE_MAGNETIC_FIELD,   STREAMTYPE_MAGNETIC_FIELD   , "MAGNETIC_FIELD_SENSOR"   ),
+                new StreamConfig( -1,                           STREAMTYPE_ML_RESULT        , "ML_RESULT"               )
+        };
+        LinkedList<Stream> streams = new LinkedList<>();
 
-            if (s == null)
-                s = sm.getDefaultSensor(type);
+        for(StreamConfig config : sConfig) {
+            if(-1 == config.mSensorType) {
+                /* Add ML stream */
+                streams.add(new Stream(null, config.mStreamType, config.mName));
+            } else {
+                /* Add Sensor stream */
+                Sensor s = sm.getDefaultSensor(config.mSensorType, true);
 
-            if (s != null)
-                sensors.add(s);
+                if (s == null)
+                    s = sm.getDefaultSensor(config.mSensorType);
+
+                if (s != null)
+                    streams.add(new Stream(s, config.mStreamType, config.mName));
+            }
         }
+
+        Log.e(TAG, "BLAA");
 
         /*
          * build and start the ffmpeg process, which transcodes into a matroska file.
@@ -132,142 +152,184 @@ public class StorageModule implements Runnable{
                 .setTag("fingerprint", Build.FINGERPRINT)
                 .setTag("beginning", getCurrentDateAsIso());
 
-        for (Sensor s : sensors)
-            b
-                    .addAudio(format, RATE, getNumChannels(s))
-                    .setStreamTag("name", s.getName());
 
+        for (Stream s : streams)
+            b
+            .addAudio(format, RATE, getNumChannels(s.getType()))
+            .setStreamTag("name", s.getName());
 
         mFFmpeg = b.build();
+
+
+        // setup threads for eache output stream
+        int streamNum = 0;
+        for (Stream s : streams) {
+            HandlerThread t = new HandlerThread(s.getName()); t.start();
+            Handler h = new Handler(t.getLooper());
+            CopyListener l = new CopyListener(streamNum, h, s.getName(), s.getType());
+
+            mOutputStreamListeners.add(l);
+            streamNum++;
+        }
+
+        Log.i(TAG, String.format("now we have %d listener lets start each of them in his own thread", mOutputStreamListeners.size()));
     }
 
     public void onDestroy() {
         if (mFFmpeg != null) {
             try {
-
                 mFFmpeg.waitFor();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
         mFFmpeg = null;
-
     }
 
-    private int getNumChannels(Sensor s) throws Exception {
-        /*
-         * https://developer.android.com/reference/android/hardware/SensorEvent#sensor
-         */
-        switch (s.getType()) {
-            case Sensor.TYPE_ACCELEROMETER:
-            case Sensor.TYPE_GYROSCOPE:
-            case Sensor.TYPE_MAGNETIC_FIELD:
+    private int getNumChannels(int type) throws Exception {
+        switch (type) {
+            case STREAMTYPE_ACCELEROMETER:
+            case STREAMTYPE_GYROSCOPE:
+            case STREAMTYPE_MAGNETIC_FIELD:
                 return 3;
 
-            case Sensor.TYPE_ROTATION_VECTOR:
+            case STREAMTYPE_ROTATION_VECTOR:
                 return 5;
 
-            case Sensor.TYPE_RELATIVE_HUMIDITY:
-            case Sensor.TYPE_PRESSURE:
-            case Sensor.TYPE_LIGHT:
-            case Sensor.TYPE_AMBIENT_TEMPERATURE:
+            case STREAMTYPE_ML_RESULT:
                 return 1;
 
             default:
-                throw new Exception("unknown number of channels for " + s.getName());
+                throw new Exception(String.format("unknown number of channels for type %d", type));
         }
     }
 
-
     @Override
     public void run() {
-        // TODO: Function is now called cyclic, but not in the specified period
         handler.postDelayed(this, (long) (1e3 / RATE));
-
-        long mOffset = 0;
-        if (mLastTimestamp == -1) {
-            mLastTimestamp = System.currentTimeMillis();
-        } else {
-            long t = System.currentTimeMillis();
-            mOffset = t - mLastTimestamp;
-            mLastTimestamp = t;
-        }
-
-        Log.d(TAG, String.format("running: offset = %dms", mOffset));
 
         Datapoint dp;
         FIFO<Datapoint> mOutputFIFO = DataPipeline.getOutputFIFO();
 
-        // set buffer size for each sensor + ML result
-        ByteBuffer mBufRot = ByteBuffer.allocate(4 * 5);
-        ByteBuffer mBufGyro = ByteBuffer.allocate(4 * 3);
-        ByteBuffer mBufAccel = ByteBuffer.allocate(4 * 3);
-        ByteBuffer mBufMag = ByteBuffer.allocate(4 * 3);
-        ByteBuffer mBufML = ByteBuffer.allocate(4 * 1);
+        //get values from output FIFO
+        dp = mOutputFIFO.get();
 
-        int maxDatapoint = 10;
-        do {
-            Log.i(TAG, String.format("OutputFIFO size: %d", mOutputFIFO.size()));
 
-            //get values from output FIFO
-            dp = mOutputFIFO.get();
+        // check if data pipeline is empty or filed
+        if (dp == null) {
+            Log.i(TAG, String.format("no data in OutputFIFO -> return"));
+            return;
+        }
 
-            // check if data pipeline is empty or filed
-            if (dp == null)
-                return;
+        //Log.i(TAG, String.format("OutputFIFO size: %d", mOutputFIFO.size()));
 
-            // get data from data pipeline
-            float[] rotData = dp.getRotationVectorData();
-            float[] gyroData = dp.getGyroscopeData();
-            float[] accelData = dp.getAccelerometerData();
-            float[] magData = dp.getMagnetometerData();
-            float[] mlData = dp.getMlResult();
+        try {
+            int maxDatapoint = 10; //mOutputFIFO.size();
+            do {
+                for (CopyListener l : mOutputStreamListeners) {
+                    float[] data;
+                    int curType = l.getType();
 
-            // put data in buffer
-            for (float v : rotData)
-                mBufRot.putFloat(v);
-            for (float v : gyroData)
-                mBufGyro.putFloat(v);
-            for (float v : accelData)
-                mBufAccel.putFloat(v);
-            for (float v : magData)
-                mBufMag.putFloat(v);
-            for (float v : mlData)
-                mBufML.putFloat(v);
+                    /* Set buffer size */
+                    ByteBuffer mBuf = ByteBuffer.allocate(SIZE_OF_FLOAT * getNumChannels(l.getType())); // set buffer size
 
-            try {
-                //write stream in matroska file
-                /* TODO: Something is wrong in following code
-                if (mOutRot == null)
-                    mOutRot = mFFmpeg.getOutputStream(0);
-                mOutRot.write(mBufRot.array());
-                if (mOutGyro == null)
-                    mOutGyro = mFFmpeg.getOutputStream(1);
-                mOutGyro.write(mBufGyro.array());
-                if (mOutAccel == null)
-                    mOutAccel = mFFmpeg.getOutputStream(2);
-                mOutAccel.write(mBufAccel.array());
-                if (mOutMag == null)
-                    mOutMag = mFFmpeg.getOutputStream(3);
-                mOutMag.write(mBufMag.array());
-                if (mOutML == null)
-                    mOutML = mFFmpeg.getOutputStream(4);
-                mOutML.write(mBufML.array());
-                */
+                    /* get data from data pipeline */
+                    switch(curType) {
+                        case STREAMTYPE_ROTATION_VECTOR:    { data = dp.getRotationVectorData();    break; }
+                        case STREAMTYPE_GYROSCOPE:          { data = dp.getGyroscopeData();         break; }
+                        case STREAMTYPE_ACCELEROMETER:      { data = dp.getAccelerometerData();     break; }
+                        case STREAMTYPE_MAGNETIC_FIELD:     { data = dp.getMagnetometerData();      break; }
+                        case STREAMTYPE_ML_RESULT:          { data = dp.getMlResult();              break; }
+                        default:
+                            throw new Exception("Unhandled copylistener reference");
+                    }
 
-                // Clear buffers
-                mBufRot.clear();
-                mBufGyro.clear();
-                mBufAccel.clear();
-                mBufMag.clear();
-                mBufML.clear();
+                    for(float v : data) // put data in buffer
+                        mBuf.putFloat(v);
+                    l.onToStream(mBuf);
+                    mBuf.clear(); // clear buffer
+                }
+
+                //Log.i(TAG, String.format("OutputFIFO size: %d", mOutputFIFO.size()));
 
                 maxDatapoint--;
-            } catch(Exception e) {
-                Log.e(TAG, "file not found");
-                notify("output stream not found");
-            }
-        } while ((maxDatapoint > 0) && (mOutputFIFO.size() > 0));
+            } while ((maxDatapoint > 0) && (mOutputFIFO.size() > 0));
+        } catch(Exception e) {
+            e.printStackTrace();
+            Log.e(TAG, e.getMessage());
+        }
     }
-}
+
+    private class CopyListener {
+        private Handler mHandler;
+        private OutputStream mOut;
+        private int mCount;
+
+        private final int mIndex;
+        private final String mName;
+        private int mType;
+
+
+        /**
+         * @param i
+         * @param h
+         * @param name
+         */
+        public CopyListener(int i, Handler h, String name, int type) {
+            mCount = 0;
+            mHandler = h;
+            mIndex = i;
+            mOut = null;
+            mName = name;
+            mType = type;
+        }
+
+        public void onToStream(ByteBuffer buf) {
+            int cnt = mCount++;
+            //Log.i(TAG, String.format("onToStream is called from: %s at type: %d", mName, mType));
+
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        if (mOut == null)
+                            mOut = mFFmpeg.getOutputStream(mIndex);
+
+                        if (mOut != null) {
+                            mOut.write(buf.array());
+                            //Log.i(TAG, String.format("%s: data %d successfully written to stream (%d)", mName, cnt, (int) Thread.currentThread().getId()));
+                        } else {
+                            //Log.e(TAG, String.format("%s: data %d failed writing to stream", mName, cnt));
+                        }
+                    } catch (Exception e){
+                        e.printStackTrace();
+                    }
+
+                }
+            });
+
+        }
+
+        public int getType() { return mType; }
+        public String getName() { return mName; }
+    } /* end CopyListener */
+
+    private class Stream {
+        private Sensor mSensor;
+        private int mType;
+        private String mName;
+
+        public Stream(Sensor sensor, int type, String name) {
+            mSensor = sensor;
+            mType = type;
+            mName = name;
+        }
+
+        public Sensor getSensor() { return mSensor; }
+        public int getType() { return mType; }
+        public String getName() { return mName; }
+    } /* end Stream */
+} /* end StorageModule */
+
+
 

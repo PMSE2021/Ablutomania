@@ -25,7 +25,6 @@ import java.util.concurrent.Executors;
  *
  * Created by phil on 8/26/16.
  */
-
 public class FFMpegProcess {
     protected Process p;
     protected LinkedList<File> mFiles;
@@ -98,23 +97,12 @@ public class FFMpegProcess {
 
     public OutputStream getOutputStream(int j) throws FileNotFoundException {
         OutputStream s = mStreams.get(j);
-        Log.e("BLAA", String.format("j=%d mStreams.size: %d   mFiles.size: %d", j, mStreams.size(), mFiles.size()));
-        Log.e("BLAA", String.format("s = %s", (s == null) ? "null" : "not null"));
         if (s == null) {
-            Log.e("BLAA", String.format("mFiles.get()"));
             File f = mFiles.get(j);
-            Log.e("BLAA", String.format("Filepath f = %s", f.getAbsolutePath()));
-            Log.e("BLAA", String.format("File %s", f.exists() ? "exists" : "NOT exists"));
-            Log.e("BLAA", String.format("FileOutputStream fos = new FileOutputStream(f)"));
-
             FileOutputStream fos = new FileOutputStream(f);
-
-            Log.e("BLAA", String.format("f.delete()"));
             f.delete();
-            Log.e("BLAA", String.format("mStreams.put(j, new BufferedOutputStream(fos))"));
             mStreams.put(j, new BufferedOutputStream(fos));
         }
-        Log.e("BLAA", String.format("return"));
         return mStreams.get(j);
     }
 
@@ -274,19 +262,16 @@ public class FFMpegProcess {
             inputopts.add("-i");
             inputopts.add("async:file:"+f.getAbsolutePath());
 
-            //TODO: Why do we need ProcessBuilder and what is it doing?
-            //      It seems this command creates a named pipe, so two processes can
-            //      access the file.
             /* create named pipe */
-            //f.delete();
-            //Process p = new ProcessBuilder().command("mknod", f.getAbsolutePath(), "p").start();
-            //int result = p.waitFor();
+            f.delete();
+            Process p = new ProcessBuilder().command("mknod", f.getAbsolutePath(), "p").start();
+            int result = p.waitFor();
 
-            //if (result != 0)
-            //    throw new IOException("mknod failed");
+            if (result != 0)
+                throw new IOException("mknod failed");
 
             /* open and store for later use */
-            //f = new File(f.getAbsolutePath());
+            f = new File(f.getAbsolutePath());
             f.deleteOnExit();
             mInputPipes.add( f );
             numinputs ++;

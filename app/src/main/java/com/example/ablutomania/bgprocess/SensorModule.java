@@ -271,10 +271,10 @@ public class SensorModule implements Runnable {
                     }
                 }
 
-                sLog = "FIFO lists:";
-                for (FIFO f : mFifos)
-                    sLog += String.format(" %d", f.size());
-                Log.i(TAG, sLog);
+                //sLog = "FIFO lists:";
+                //for (FIFO f : mFifos)
+                //    sLog += String.format(" %d", f.size());
+                //Log.i(TAG, sLog);
 
                 if (bDpAvailable) {
                     try {
