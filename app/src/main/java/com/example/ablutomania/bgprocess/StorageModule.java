@@ -155,9 +155,8 @@ public class StorageModule implements Runnable{
 
 
         for (Stream s : streams)
-            b
-                    .addAudio(format, RATE, getNumChannels(s))
-                    .setStreamTag("name", s.getName());
+            b.addAudio(format, RATE, getNumChannels(s.getType()))
+             .setStreamTag("name", s.getName());
 
         mFFmpeg = b.build();
 
@@ -276,6 +275,25 @@ public class StorageModule implements Runnable{
         }
     }
 
+    /* get free storage in MB */
+    public float freeStorage(){
+        StatFs statFs = new StatFs(Environment.getRootDirectory().getAbsolutePath());
+        float free = (float) ((statFs.getAvailableBlocksLong() * statFs.getBlockSizeLong()) / 1e6);
+        return free;
+    }
+
+    /*public static boolean isCharging(Context context) {
+
+        //Determine the current charging state
+        IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+        Intent batteryStatus = context.registerReceiver(null, ifilter);
+
+        // Are we charging?
+        int status = batteryStatus.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+
+        return status == BatteryManager.BATTERY_STATUS_CHARGING;
+    }*/
+
     private class CopyListener {
         private Handler mHandler;
         private OutputStream mOut;
@@ -346,26 +364,3 @@ public class StorageModule implements Runnable{
         public String getName() { return mName; }
     } /* end Stream */
 } /* end StorageModule */
-
-
-
-    //get free storage in MB
-    public float freeStorage(){
-        StatFs statFs = new StatFs(Environment.getRootDirectory().getAbsolutePath());
-        float free = (float) ((statFs.getAvailableBlocksLong() * statFs.getBlockSizeLong()) / 1e6);
-        return free;
-    }
-
-    /*public static boolean isCharging(Context context) {
-
-        //Determine the current charging state
-        IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
-        Intent batteryStatus = context.registerReceiver(null, ifilter);
-
-        // Are we charging?
-        int status = batteryStatus.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
-
-        return status == BatteryManager.BATTERY_STATUS_CHARGING;
-    }*/
-}
-

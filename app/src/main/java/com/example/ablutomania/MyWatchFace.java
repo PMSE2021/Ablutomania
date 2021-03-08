@@ -285,15 +285,15 @@ public class MyWatchFace extends CanvasWatchFaceService {
             canvas.drawText(text, mXOffset, mYOffset, mTextPaint);
 
             switch (SystemStatus.GetInstance().getStatus()) {
-                case SystemStatus.Status.OK:
+                case OK:
                     String statusOK = "OK";
                     canvas.drawText(statusOK, mXOffsetStatus, mYOffsetStatus, mStatusOKPaint);
                     break;
-                case SystemStatus.Status.WARNING:
+                case WARNING:
                     String statusWarning = "Warning";
                     canvas.drawText(statusWarning, mXOffsetStatus, mYOffsetStatus, mStatusWarningPaint);
                     break;
-                case SystemStatus.Status.ERROR:
+                case ERROR :
                     String statusError = "Error";
                     canvas.drawText(statusError, mXOffsetStatus, mYOffsetStatus, mStatusErrorPaint);
                     break;

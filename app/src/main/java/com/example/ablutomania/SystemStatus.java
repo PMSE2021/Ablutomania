@@ -1,7 +1,5 @@
 package com.example.ablutomania;
 
-import java.util.logging.LogManager;
-
 public class SystemStatus {
 
     private static final SystemStatus instance = new SystemStatus();
@@ -14,7 +12,7 @@ public class SystemStatus {
         ERROR
     }
 
-    private Status status = OK;
+    private Status status = Status.OK;
 
     public static SystemStatus GetInstance() {
         return instance;
