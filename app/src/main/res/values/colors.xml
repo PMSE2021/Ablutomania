@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="background">#000000</color>
+    <color name="digital_text">#ffffff</color>
+    <color name="status_text_OK">#01B050</color>
+    <color name="status_text_Warning">#FFC107</color>
+    <color name="status_text_Error">#FF0000</color>
+</resources>

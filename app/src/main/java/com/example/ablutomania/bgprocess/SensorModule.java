@@ -235,7 +235,7 @@ public class SensorModule implements Runnable {
             HandlerThread t = new HandlerThread(s.getName()); t.start();
             Handler h = new Handler(t.getLooper());
             CopyListener l = new CopyListener(i, RATE, s.getName());
-            int delay = s.isWakeUpSensor() ? s.getFifoMaxEventCount() / 2 * us : 1;
+            int delay = /* s.isWakeUpSensor() ? s.getFifoMaxEventCount() / 2 * us :*/ 1;
             sm.registerListener(l, s, us, delay, h);
             mSensorListeners.add(l);
             mFifos.add(new FIFO<>());
@@ -346,7 +346,6 @@ public class SensorModule implements Runnable {
                  * wait until the mStartTimeNS is cleared. This will be done by the SyncLockListener
                  */
                 mSyncLatch.await();
-
                 /*
                  *  multiple stream synchronization, wait until a global timestamp was set,
                  *  and only start pushing events after this timestamp.
@@ -363,8 +362,8 @@ public class SensorModule implements Runnable {
                 /*
                  *    Uncomment following to lines to allow debugging of sensor delay over time by logcat.
                  */
-                //String logText = String.format("logSampleDelay %.4f|%.4f|%d|%s", sensorDelay / 1e6, mOffsetUS / 1e6, mLastTimestamp, mName);
-                //Log.i(TAG,logText);
+                String logText = String.format("logSampleDelay %.4f|%.4f|%d|%s", sensorDelay / 1e6, mOffsetUS / 1e6, mLastTimestamp, mName);
+                Log.i(TAG,logText);
 
                 /*
                  * check whether or not interpolation is required

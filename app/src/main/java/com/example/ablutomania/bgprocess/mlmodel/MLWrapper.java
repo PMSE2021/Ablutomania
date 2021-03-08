@@ -65,8 +65,10 @@ public class MLWrapper extends Activity implements Runnable {
         Log.d(TAG, String.format("running: offset = %dms", mOffset));
 
         //No SensorData -> return
-        if (DataPipeline.getInputFIFO().size() < ML_BUFFER_SIZE)
+        if (DataPipeline.getInputFIFO().size() < ML_BUFFER_SIZE){
             return;
+        }
+
 
         synchronized (MLWrapper.this) {
             if(bMLprocessing)
@@ -121,8 +123,9 @@ public class MLWrapper extends Activity implements Runnable {
             dp = mInputFifo.get();
 
             // check if data pipeline is empty or filed
-            if (dp == null)
+            if (dp == null) {
                 return;
+            }
 
             //Put datapoints in a FIFO to store datapoint temporary and to be able to still have
             //the raw data after ML task has finished
@@ -154,6 +157,7 @@ public class MLWrapper extends Activity implements Runnable {
                     mMLInputBuffer[numSamples][idx] = magData[i];
 
             numSamples++;
+
         } while(numSamples < ML_BUFFER_SIZE);
     }
 
@@ -165,14 +169,15 @@ public class MLWrapper extends Activity implements Runnable {
         while(mDpFIFO.size() > 0) {
             dp = mDpFIFO.get();
 
-            if(dp == null)
+            if(dp == null) {
+                Log.e(TAG, "MLWrapper: Data point is null");
                 continue;   //If datapoint is null, proceeed with next one
-
+            }
             //TODO: Add MLResult {-1, 0, 1} to specific datapoint
             dp.setMlResult(new float[]{0});
             mOutputFifo.put(dp);
 
-            Log.i(TAG, String.format("OutputFIFO size: %d", mOutputFifo.size()));
+            Log.i(TAG, String.format("MLWrapper: OutputFIFO size: %d", mOutputFifo.size()));
         }
     }
 

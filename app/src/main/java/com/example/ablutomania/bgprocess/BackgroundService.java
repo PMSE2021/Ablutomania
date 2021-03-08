@@ -47,6 +47,8 @@ public class BackgroundService extends Service {
         mMLWrapper = new MLWrapper();
         new Thread(mMLWrapper).start();
 
+
+
         return START_STICKY;
     }
 

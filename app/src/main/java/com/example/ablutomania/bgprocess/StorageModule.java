@@ -10,10 +10,12 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
+import android.os.StatFs;
 import android.provider.Settings;
 import android.util.Log;
 
 import com.example.ablutomania.CustomNotification;
+import com.example.ablutomania.SystemStatus;
 import com.example.ablutomania.bgprocess.ffmpeg.FFMpegProcess;
 import com.example.ablutomania.bgprocess.types.Datapoint;
 import com.example.ablutomania.bgprocess.types.FIFO;
@@ -78,6 +80,7 @@ public class StorageModule implements Runnable{
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
             notify("FFMPEG initialisation failed");
+            SystemStatus.GetInstance().setStatusError();
         }
 
     }
@@ -137,8 +140,6 @@ public class StorageModule implements Runnable{
             }
         }
 
-        Log.e(TAG, "BLAA");
-
         /*
          * build and start the ffmpeg process, which transcodes into a matroska file.
          */
@@ -155,8 +156,8 @@ public class StorageModule implements Runnable{
 
         for (Stream s : streams)
             b
-            .addAudio(format, RATE, getNumChannels(s.getType()))
-            .setStreamTag("name", s.getName());
+                    .addAudio(format, RATE, getNumChannels(s))
+                    .setStreamTag("name", s.getName());
 
         mFFmpeg = b.build();
 
@@ -206,6 +207,21 @@ public class StorageModule implements Runnable{
 
     @Override
     public void run() {
+        // TODO: Function is now called cyclic, but not in the specified period
+
+        //check, if watch is charging
+        /*if (isCharging(ctx) = true) {
+            Log.i(TAG, "Charging device");
+            return;
+        }*/
+
+        //check, if free memory < 5 MB: error (1 min = 0.18 MB; 1 h = 11 MB)
+        if (freeStorage() < 5) {
+            Log.e(TAG, "no free storage space available");
+            notify("You ran out of free storage");
+        }
+
+
         handler.postDelayed(this, (long) (1e3 / RATE));
 
         Datapoint dp;
@@ -332,4 +348,24 @@ public class StorageModule implements Runnable{
 } /* end StorageModule */
 
 
+
+    //get free storage in MB
+    public float freeStorage(){
+        StatFs statFs = new StatFs(Environment.getRootDirectory().getAbsolutePath());
+        float free = (float) ((statFs.getAvailableBlocksLong() * statFs.getBlockSizeLong()) / 1e6);
+        return free;
+    }
+
+    /*public static boolean isCharging(Context context) {
+
+        //Determine the current charging state
+        IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+        Intent batteryStatus = context.registerReceiver(null, ifilter);
+
+        // Are we charging?
+        int status = batteryStatus.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+
+        return status == BatteryManager.BATTERY_STATUS_CHARGING;
+    }*/
+}
 
