@@ -44,7 +44,7 @@ public class BackgroundService extends Service {
         new Thread(mSensorModule).start();
 
         // Create instance and start thread MLWrapper
-        mMLWrapper = new MLWrapper();
+        mMLWrapper = new MLWrapper((Context)BackgroundService.this);
         new Thread(mMLWrapper).start();
 
 

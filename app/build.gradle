@@ -22,16 +22,13 @@ android {
         }
     }
 
-    aaptOptions{
+    aaptOptions {
         noCompress "tflite"
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
-//    buildFeatures {
-//        mlModelBinding true
-//    }
 
 }
 
@@ -44,8 +41,12 @@ dependencies {
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation 'androidx.recyclerview:recyclerview:1.1.0'
     implementation 'androidx.wear:wear:1.1.0'
-    implementation 'com.google.android.material:material:1.2.1'
     implementation 'com.google.android.gms:play-services-base:17.6.0'
+    implementation 'org.tensorflow:tensorflow-lite-metadata:0.1.0-rc1'
     compileOnly 'com.google.android.wearable:wearable:2.8.1'
     implementation 'org.tensorflow:tensorflow-lite:+'
+    implementation 'org.tensorflow:tensorflow-lite-support:0.1.0-rc1'
+
+
+
 }
