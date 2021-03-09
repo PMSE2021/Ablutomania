@@ -2,10 +2,14 @@ package com.example.ablutomania.bgprocess.mlmodel;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.AssetFileDescriptor;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+
+import com.example.ablutomania.R;
+import com.example.ablutomania.YesNoDialog;
 import com.example.ablutomania.bgprocess.DataPipeline;
 import com.example.ablutomania.bgprocess.types.Datapoint;
 import com.example.ablutomania.bgprocess.types.FIFO;
@@ -32,12 +36,17 @@ public class MLWrapper extends Activity implements Runnable {
     private static final String MODEL_PATH = "CNN_model_ablutomania-20-1 IH.tflite";
     private Interpreter tflite;
     private Context ctx;
+    private Boolean wasCompulsiveHandwashing = null;
+
+    private static final int NO_HANDWASHING = 0;
+    private static final int HANDWASHING = 1;
+    private static final int COMPULSIVE_HANDWASHING = -1;
 
     /* Mutex for these variables are necessary - Just one thread should process the data*/
     private FIFO<Datapoint> mDpFIFO = new FIFO<>();
     private float[][][][] mMLInputBuffer = new float[1][ML_BUFFER_SIZE][13][1];
     private float[][] mMLOutputBuffer = new float[1][3];
-    private float[] mLResult = {0};
+    private int mLResult = 0;
 
     public MLWrapper(Context context) {
         this.ctx = context;
@@ -49,10 +58,7 @@ public class MLWrapper extends Activity implements Runnable {
 
         } catch (Exception e) {
             Log.e(TAG, "Interpreter: "+e.getMessage());
-
         }
-
-
     }
 
     @Override
@@ -92,10 +98,6 @@ public class MLWrapper extends Activity implements Runnable {
 
                 Log.i(TAG, String.format("Start running ML model.."));
                 // Run interference passing the input shape & getting the output shape
-                //TODO: Following exception is thrown here:
-                //AndroidRuntime: java.lang.NullPointerException: Attempt to invoke virtual method 'void org.tensorflow.lite.Interpreter.run(java.lang.Object, java.lang.Object)' on a null object reference
-                //at com.example.ablutomania.bgprocess.mlmodel.MLWrapper$1.run(MLWrapper.java:83)
-                //at java.lang.Thread.run(Thread.java:764)
                 try {
                     tflite.run(mMLInputBuffer, mMLOutputBuffer);
                     Log.i(TAG, String.format("ML model finished."));
@@ -105,12 +107,6 @@ public class MLWrapper extends Activity implements Runnable {
                     Log.i(TAG, String.format("ML model failed"));
                 }
 
-                //Convert result
-                if(mMLOutputBuffer[0][0] == 0 && mMLOutputBuffer[0][1] == 0 && mMLOutputBuffer[0][2] == 1) mLResult[0] = -1;
-                if(mMLOutputBuffer[0][0] == 0 && mMLOutputBuffer[0][1] == 1 && mMLOutputBuffer[0][2] == 0) mLResult[0] = 0;
-                if(mMLOutputBuffer[0][0] == 1 && mMLOutputBuffer[0][1] == 0 && mMLOutputBuffer[0][2] == 0) mLResult[0] = 1;
-                Log.i(TAG, String.format("mLResult is " ));
-                Log.i(TAG, Float.toString(mLResult[0]));
                 // Post-process data here
                 postProcessData();
 
@@ -175,6 +171,24 @@ public class MLWrapper extends Activity implements Runnable {
         Datapoint dp;
         FIFO<Datapoint> mOutputFifo = DataPipeline.getOutputFIFO();
 
+        //Convert result
+        if(mMLOutputBuffer[0][0] == 0 && mMLOutputBuffer[0][1] == 0 && mMLOutputBuffer[0][2] == 1) mLResult = COMPULSIVE_HANDWASHING;
+        if(mMLOutputBuffer[0][0] == 0 && mMLOutputBuffer[0][1] == 1 && mMLOutputBuffer[0][2] == 0) mLResult = NO_HANDWASHING;
+        if(mMLOutputBuffer[0][0] == 1 && mMLOutputBuffer[0][1] == 0 && mMLOutputBuffer[0][2] == 0) mLResult = HANDWASHING;
+        Log.i(TAG, String.format("mLResult is " ));
+        Log.i(TAG, Float.toString(mLResult));
+
+        if(NO_HANDWASHING != mLResult) {
+            /* Ask user if handwashing was compulsive */
+            getUserFeedback();
+
+            //TODO: Synchronize and timeout
+            if (null != wasCompulsiveHandwashing) {
+                mLResult = (true == wasCompulsiveHandwashing) ? COMPULSIVE_HANDWASHING : HANDWASHING;
+                wasCompulsiveHandwashing = null;
+            }
+        }
+
         // Move data from internal ML FIFO to output buffer
         while(mDpFIFO.size() > 0) {
             dp = mDpFIFO.get();
@@ -182,7 +196,7 @@ public class MLWrapper extends Activity implements Runnable {
             if(dp == null)
                 continue;   //If datapoint is null, proceeed with next one
 
-            dp.setMlResult(mLResult);
+            dp.setMlResult(new float[] { mLResult });
             mOutputFifo.put(dp);
 
             Log.i(TAG, String.format("OutputFIFO size: %d", mOutputFifo.size()));
@@ -196,6 +210,16 @@ public class MLWrapper extends Activity implements Runnable {
         long startOffset = fileDescriptor.getStartOffset();
         long declaredLength = fileDescriptor.getDeclaredLength();
         return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
+    }
 
+    void getUserFeedback() {
+        Intent intent = new Intent(this, YesNoDialog.class);
+        intent.putExtra("question", getString(R.string.ml_user_feedback));
+        startActivityForResult(intent, 0);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        wasCompulsiveHandwashing = data.getBooleanExtra("answer", false);
     }
 }

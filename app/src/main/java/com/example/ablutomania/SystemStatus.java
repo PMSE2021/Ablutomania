@@ -14,7 +14,7 @@ public class SystemStatus {
         ERROR
     }
 
-    private Status status = OK;
+    private Status status = Status.OK;
 
     public static SystemStatus GetInstance() {
         return instance;

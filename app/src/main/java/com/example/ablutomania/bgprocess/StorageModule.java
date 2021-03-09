@@ -234,7 +234,6 @@ public class StorageModule implements Runnable{
                 //get values from output FIFO
                 dp = mOutputFIFO.get();
 
-
                 // check if data pipeline is empty or filed
                 if (dp == null) {
                     Log.i(TAG, String.format("no data in OutputFIFO -> return"));

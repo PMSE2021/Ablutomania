@@ -274,16 +274,13 @@ public class FFMpegProcess {
             inputopts.add("-i");
             inputopts.add("async:file:"+f.getAbsolutePath());
 
-            //TODO: Why do we need ProcessBuilder and what is it doing?
-            //      It seems this command creates a named pipe, so two processes can
-            //      access the file.
             /* create named pipe */
-            //f.delete();
-            //Process p = new ProcessBuilder().command("mknod", f.getAbsolutePath(), "p").start();
-            //int result = p.waitFor();
+            f.delete();
+            Process p = new ProcessBuilder().command("mknod", f.getAbsolutePath(), "p").start();
+            int result = p.waitFor();
 
-            //if (result != 0)
-            //    throw new IOException("mknod failed");
+            if (result != 0)
+                throw new IOException("mknod failed");
 
             /* open and store for later use */
             f = new File(f.getAbsolutePath());

@@ -271,10 +271,10 @@ public class SensorModule implements Runnable {
                     }
                 }
 
-                sLog = "FIFO lists:";
-                for (FIFO f : mFifos)
-                    sLog += String.format(" %d", f.size());
-                Log.i(TAG, sLog);
+                //sLog = "FIFO lists:";
+                //for (FIFO f : mFifos)
+                //    sLog += String.format(" %d", f.size());
+                //Log.i(TAG, sLog);
 
                 if (bDpAvailable) {
                     try {
@@ -362,8 +362,8 @@ public class SensorModule implements Runnable {
                 /*
                  *    Uncomment following to lines to allow debugging of sensor delay over time by logcat.
                  */
-                String logText = String.format("logSampleDelay %.4f|%.4f|%d|%s", sensorDelay / 1e6, mOffsetUS / 1e6, mLastTimestamp, mName);
-                Log.i(TAG,logText);
+                //String logText = String.format("logSampleDelay %.4f|%.4f|%d|%s", sensorDelay / 1e6, mOffsetUS / 1e6, mLastTimestamp, mName);
+                //Log.i(TAG,logText);
 
                 /*
                  * check whether or not interpolation is required
