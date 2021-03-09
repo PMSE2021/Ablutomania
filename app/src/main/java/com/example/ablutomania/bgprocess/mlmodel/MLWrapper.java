@@ -28,12 +28,12 @@ import java.util.Objects;
 public class MLWrapper extends Activity implements Runnable {
     private static final String TAG = "MLWrapper";
     private static final double RATE = 50.;
-    private static final int ML_BUFFER_SIZE = 1000;
+    private static final int ML_BUFFER_SIZE = 500;
     private Handler handler;
     private ByteBuffer mBuf;
     private long mLastTimestamp = -1;
     private boolean bMLprocessing = false;
-    private static final String MODEL_PATH = "CNN_model_ablutomania-20-1 IH.tflite";
+    private static final String MODEL_PATH = "CNN_LSTM_model_ablutomania.tflite";
     private Interpreter tflite;
     private Context ctx;
     private Boolean wasCompulsiveHandwashing = null;
@@ -180,7 +180,7 @@ public class MLWrapper extends Activity implements Runnable {
 
         if(NO_HANDWASHING != mLResult) {
             /* Ask user if handwashing was compulsive */
-            getUserFeedback();
+            //getUserFeedback();
 
             //TODO: Synchronize and timeout
             if (null != wasCompulsiveHandwashing) {
