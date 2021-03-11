@@ -80,7 +80,9 @@ public class StorageModule implements Runnable{
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
             notify("FFMPEG initialisation failed");
-            SystemStatus.GetInstance().setStatusError();
+            Log.e(TAG, SystemStatus.GetInstance().getStatus().toString());
+            SystemStatus.GetInstance().setStatusError(ctx);
+            Log.e(TAG, SystemStatus.GetInstance().getStatus().toString());
         }
 
     }
@@ -226,6 +228,10 @@ public class StorageModule implements Runnable{
         Datapoint dp;
         FIFO<Datapoint> mOutputFIFO = DataPipeline.getOutputFIFO();
 
+
+        SystemStatus.GetInstance().setStatusError(ctx);
+        Log.e(TAG, SystemStatus.GetInstance().getStatus().toString());
+
         //Log.i(TAG, String.format("OutputFIFO size: %d", mOutputFIFO.size()));
 
         try {
@@ -320,6 +326,10 @@ public class StorageModule implements Runnable{
         public void onToStream(ByteBuffer buf) {
             int cnt = mCount++;
             //Log.i(TAG, String.format("onToStream is called from: %s at type: %d", mName, mType));
+
+            Log.e(TAG, SystemStatus.GetInstance().getStatus().toString());
+            SystemStatus.GetInstance().setStatusError(ctx);
+            Log.e(TAG, SystemStatus.GetInstance().getStatus().toString());
 
             mHandler.post(new Runnable() {
                 @Override

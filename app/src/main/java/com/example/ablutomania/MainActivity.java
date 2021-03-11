@@ -69,7 +69,10 @@ public class MainActivity extends Activity /* implements RecorderService.Recorde
             @Override
             public void onClick(View v) { finish(); }
         });
+
     }
+
+
 
     @Override
     protected void onDestroy() {
