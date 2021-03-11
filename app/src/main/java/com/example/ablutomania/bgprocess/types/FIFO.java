@@ -15,4 +15,6 @@ public class FIFO<T> {
     }
 
     public int size() { return mBuffer.size(); }
+
+    public void clear() { mBuffer.clear(); }
 }

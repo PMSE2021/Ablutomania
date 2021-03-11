@@ -1,5 +1,6 @@
 package com.example.ablutomania.bgprocess.mlmodel;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -14,16 +15,13 @@ import com.example.ablutomania.bgprocess.DataPipeline;
 import com.example.ablutomania.bgprocess.types.Datapoint;
 import com.example.ablutomania.bgprocess.types.FIFO;
 
-import org.tensorflow.lite.DataType;
 import org.tensorflow.lite.Interpreter;
-import org.tensorflow.lite.support.tensorbuffer.TensorBuffer;
 
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.Objects;
 
 public class MLWrapper extends Activity implements Runnable {
     private static final String TAG = "MLWrapper";
@@ -33,9 +31,10 @@ public class MLWrapper extends Activity implements Runnable {
     private ByteBuffer mBuf;
     private long mLastTimestamp = -1;
     private boolean bMLprocessing = false;
-    private static final String MODEL_PATH = "CNN_LSTM_model_ablutomania.tflite";
+    private static final String MODEL_PATH = "CNN_LSTM_PRE_model_ablutomania-5-mil.tflite";
     private Interpreter tflite;
     private Context ctx;
+    private Datapoint dpForTransformation;
     private Boolean wasCompulsiveHandwashing = null;
 
     private static final int NO_HANDWASHING = 0;
@@ -46,11 +45,12 @@ public class MLWrapper extends Activity implements Runnable {
     private FIFO<Datapoint> mDpFIFO = new FIFO<>();
     private float[][][][] mMLInputBuffer = new float[1][ML_BUFFER_SIZE][13][1];
     private float[][] mMLOutputBuffer = new float[1][3];
-    private int mLResult = 0;
+    private int mMLResult = 0;
 
     public MLWrapper(Context context) {
         this.ctx = context;
         handler = new Handler(Looper.getMainLooper());
+        dpForTransformation = null;
 
 
         try {
@@ -63,7 +63,6 @@ public class MLWrapper extends Activity implements Runnable {
 
     @Override
     public void run() {
-        // TODO: Function is now called cyclic, but not in the specified period
         handler.postDelayed(this, (long) (1e3 / RATE));
 
         long mOffset = 0;
@@ -75,6 +74,11 @@ public class MLWrapper extends Activity implements Runnable {
             mLastTimestamp = t;
         }
         Log.d(TAG, String.format("running: offset = %dms", mOffset));
+
+        if (   (null == dpForTransformation)
+            && (DataPipeline.getInputFIFO().size() > 0)) {
+            dpForTransformation = DataPipeline.getInputFIFO().get();
+        }
 
         //No SensorData -> return
         if (DataPipeline.getInputFIFO().size() < ML_BUFFER_SIZE)
@@ -117,39 +121,51 @@ public class MLWrapper extends Activity implements Runnable {
         }).start();
     }
 
-    public void onDestroy() { super.onDestroy(); }
+    @Override
+    @SuppressLint("MissingSuperCall")   /* Ok, because super.onCreate() is not called */
+    public void onDestroy() {
+        synchronized (MLWrapper.this) {
+            while (bMLprocessing);
+        }
+        tflite.close();
+    }
 
     private void preProcessData() {
         Datapoint dp;
         FIFO<Datapoint> mInputFifo = DataPipeline.getInputFIFO();
         int numSamples = 0;
+        Datapoint dpTemp;
 
         do {
             Log.i(TAG, String.format("InputFIFO size: %d", mInputFifo.size()));
 
             //Get SensorValues from input FIFO
-            dp = mInputFifo.get();
+            dpTemp = mInputFifo.get();
 
             // check if data pipeline is empty or filed
-            if (dp == null)
+            if (dpTemp == null)
                 return;
 
             //Put datapoints in a FIFO to store datapoint temporary and to be able to still have
             //the raw data after ML task has finished
-            mDpFIFO.put(dp);
+            mDpFIFO.put(dpForTransformation);
 
             // get data from data pipeline
-            float[] rotData = dp.getRotationVectorData();
-            float[] gyroData = dp.getGyroscopeData();
-            float[] accelData = dp.getAccelerometerData();
-            float[] magData = dp.getMagnetometerData();
+            float[] rotData = dpForTransformation.getRotationVectorData();
+            float[] gyroData = dpForTransformation.getGyroscopeData();
+            float[] accelData = dpForTransformation.getAccelerometerData();
+            float[] magData = dpForTransformation.getMagnetometerData();
+
+            // Used for differentiate of absolute values of rotation and magnetometer data
+            float[] rotDataTemp = dpTemp.getRotationVectorData();
+            float[] magDataTemp = dpTemp.getMagnetometerData();
 
             //extract raw values from datapoint
             int idx = 0;
 
             if(null != rotData)
-                for (int i = 0; i < (rotData.length - 1) /* TODO: Here are just 4 features? */ ; i++, idx++)
-                    mMLInputBuffer[0][numSamples][idx][0] = rotData[i];
+                for (int i = 0; i < (rotData.length - 1); i++, idx++)
+                    mMLInputBuffer[0][numSamples][idx][0] = rotDataTemp[i] - rotData[i];
 
             if(null != gyroData)
                 for (int i = 0; i < gyroData.length; i++, idx++)
@@ -161,8 +177,9 @@ public class MLWrapper extends Activity implements Runnable {
 
             if(null != magData)
                 for (int i = 0; i < magData.length; i++, idx++)
-                    mMLInputBuffer[0][numSamples][idx][0] = magData[i];
+                    mMLInputBuffer[0][numSamples][idx][0] = magDataTemp[i] - magData[i];
 
+            dpForTransformation = dpTemp;
             numSamples++;
         } while(numSamples < ML_BUFFER_SIZE);
     }
@@ -172,19 +189,19 @@ public class MLWrapper extends Activity implements Runnable {
         FIFO<Datapoint> mOutputFifo = DataPipeline.getOutputFIFO();
 
         //Convert result
-        if(mMLOutputBuffer[0][0] == 0 && mMLOutputBuffer[0][1] == 0 && mMLOutputBuffer[0][2] == 1) mLResult = COMPULSIVE_HANDWASHING;
-        if(mMLOutputBuffer[0][0] == 0 && mMLOutputBuffer[0][1] == 1 && mMLOutputBuffer[0][2] == 0) mLResult = NO_HANDWASHING;
-        if(mMLOutputBuffer[0][0] == 1 && mMLOutputBuffer[0][1] == 0 && mMLOutputBuffer[0][2] == 0) mLResult = HANDWASHING;
+        if(mMLOutputBuffer[0][0] == 0 && mMLOutputBuffer[0][1] == 0 && mMLOutputBuffer[0][2] == 1) mMLResult = COMPULSIVE_HANDWASHING;
+        if(mMLOutputBuffer[0][0] == 0 && mMLOutputBuffer[0][1] == 1 && mMLOutputBuffer[0][2] == 0) mMLResult = NO_HANDWASHING;
+        if(mMLOutputBuffer[0][0] == 1 && mMLOutputBuffer[0][1] == 0 && mMLOutputBuffer[0][2] == 0) mMLResult = HANDWASHING;
         Log.i(TAG, String.format("mLResult is " ));
-        Log.i(TAG, Float.toString(mLResult));
+        Log.i(TAG, Float.toString(mMLResult));
 
-        if(NO_HANDWASHING != mLResult) {
+        if(NO_HANDWASHING != mMLResult) {
             /* Ask user if handwashing was compulsive */
             //getUserFeedback();
 
             //TODO: Synchronize and timeout
             if (null != wasCompulsiveHandwashing) {
-                mLResult = (true == wasCompulsiveHandwashing) ? COMPULSIVE_HANDWASHING : HANDWASHING;
+                mMLResult = (true == wasCompulsiveHandwashing) ? COMPULSIVE_HANDWASHING : HANDWASHING;
                 wasCompulsiveHandwashing = null;
             }
         }
@@ -196,7 +213,7 @@ public class MLWrapper extends Activity implements Runnable {
             if(dp == null)
                 continue;   //If datapoint is null, proceeed with next one
 
-            dp.setMlResult(new float[] { mLResult });
+            dp.setMlResult(new float[] {mMLResult});
             mOutputFifo.put(dp);
 
             Log.i(TAG, String.format("OutputFIFO size: %d", mOutputFifo.size()));
