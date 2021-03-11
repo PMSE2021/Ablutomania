@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.IBinder;
 
+import com.example.ablutomania.CustomNotification;
 import com.example.ablutomania.bgprocess.mlmodel.MLWrapper;
 
 /*
@@ -18,6 +19,11 @@ public class BackgroundService extends Service {
     private SensorModule mSensorModule;
     private MLWrapper mMLWrapper;
     private StorageModule mStorageModule;
+
+    private int NOTIFICATION_ID = 0x007;
+
+    private static final int STATE_IDLE = 0;
+    private static final int STATE_RUNNING = 1;
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -33,7 +39,12 @@ public class BackgroundService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
 
-//        Log.d(TAG, "onStart: " + intent.toString());
+        /**
+         * start the service in foreground mode, so Android won't kill it when running in
+         * background. Do this before actually starting the service to not delay the UI while
+         * the service is being started.
+         */
+        startForeground(NOTIFICATION_ID, CustomNotification.updateNotification(this, CHANID, "App has started in foreground"));
 
         // Create instance and start storage module
         mStorageModule = new StorageModule((Context)BackgroundService.this);

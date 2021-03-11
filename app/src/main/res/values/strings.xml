@@ -21,6 +21,10 @@
     <string name="message">Watch face tapped</string>
     <string name="my_digital_name">My Digital</string>
 
+    <string name="huawei_headline">Battery Settings for Huawei</string>
+    <string name="huawei_text">in order for this app to work correctly, please enable this app as protected in the following settings</string>
+    <string name="go_to_protected">go to settings</string>
+
     <!--
     This string is used for square devices and overridden by hello_world in
     values-round/strings.xml for round devices.

@@ -2,10 +2,18 @@ package com.example.ablutomania;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
-import android.util.Log;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.view.View;
 
 import androidx.annotation.NonNull;
@@ -44,7 +52,6 @@ public class MainActivity extends Activity /* implements RecorderService.Recorde
             }); */
         }
 
-/*
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             Intent intent = new Intent();
             String packageName = getPackageName();
@@ -55,7 +62,26 @@ public class MainActivity extends Activity /* implements RecorderService.Recorde
                 startActivity(intent);
             }
         }
- */
+
+
+        /** some Huawei fuckup hackery, see
+         * https://stackoverflow.com/questions/31638986/protected-apps-setting-on-huawei-phones-and-how-to-handle-it
+         */
+        final SharedPreferences sp = getSharedPreferences("ProtectedApps", Context.MODE_PRIVATE);
+        if("huawei".equalsIgnoreCase(android.os.Build.MANUFACTURER) && !sp.getBoolean("protected",false)) {
+            AlertDialog.Builder builder  = new AlertDialog.Builder(this);
+            builder.setTitle(R.string.huawei_headline).setMessage(R.string.huawei_text)
+                    .setPositiveButton(R.string.go_to_protected, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            Intent intent = new Intent();
+                            intent.setComponent(new ComponentName("com.huawei.systemmanager",
+                                    "com.huawei.systemmanager.optimize.process.ProtectActivity"));
+                            startActivity(intent);
+                            sp.edit().putBoolean("protected",true).commit();
+                        }
+                    }).create().show();
+        }
     }
 
     private void initApp() {
@@ -67,7 +93,11 @@ public class MainActivity extends Activity /* implements RecorderService.Recorde
         // exit button to close app
         findViewById(R.id.btn_exit).setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) { finish(); }
+            public void onClick(View v) {
+                if(null != intentRecorder)
+                    stopService(intentRecorder);
+                finish();
+            }
         });
     }
 

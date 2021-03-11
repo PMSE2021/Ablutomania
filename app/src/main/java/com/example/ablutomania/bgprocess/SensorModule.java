@@ -12,6 +12,7 @@ import android.hardware.SensorManager;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.provider.Settings;
 import android.util.Log;
 
@@ -46,6 +47,13 @@ public class SensorModule implements Runnable {
 
     private LinkedList<FIFO<float[]>> mFifos = new LinkedList<>();
 
+    private PowerManager.WakeLock mwl = null;
+
+    /* special WakeLock tag for Huawei Devices, see
+     * https://stackoverflow.com/questions/39954822/battery-optimizations-wakelocks-on-huawei-emui-4-0
+     */
+    private static final String WAKE_LOCK_TAG = "LocationManagerService";
+
     /* for start synchronization */
     private Long mStartTimeNS = -1L;
     private CountDownLatch mSyncLatch = null;
@@ -65,9 +73,15 @@ public class SensorModule implements Runnable {
         RECORDING
     }
 
+    @SuppressLint("InvalidWakeLockTag")
     public SensorModule(Context context, Intent intent) {
         ctx = context;
         handler = new Handler(Looper.getMainLooper());
+
+        if (mwl == null) {
+            PowerManager pm = (PowerManager) ctx.getSystemService(Context.POWER_SERVICE);
+            mwl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKE_LOCK_TAG);
+        }
 
         /*
          * start the recording process if there is no ffmpeg instance yet, and no stop intent
@@ -107,7 +121,6 @@ public class SensorModule implements Runnable {
 
     @Override
     public void run() {
-        // TODO: Function is now called cyclic, but not in the specified period
         handler.postDelayed(this, (long) (1e3 / RATE));
 
         long mOffset = 0;
@@ -162,7 +175,6 @@ public class SensorModule implements Runnable {
         return CustomNotification.updateNotification(ctx, CHANID, notifyContent[eState.ordinal()]);
     }
 
-
     public static boolean isConnected(Context context) {
         return false;
 
@@ -174,9 +186,14 @@ public class SensorModule implements Runnable {
 
     public void onDestroy() {
         stopRecording();
+        synchronized (this) {
+            DataPipeline.getInputFIFO().clear();
+        }
     }
 
     public void startRecording() throws Exception {
+        mwl.acquire();
+
         /*
          *  Try to record this list of sensors. We go through this list and get them as wakeup
          *  sensors first. Terminate if there is no wakeup supported (otherwise a wake-lock would
@@ -252,6 +269,7 @@ public class SensorModule implements Runnable {
         for (CopyListener l : mSensorListeners)
             sm.flush(l);
 
+        mwl.release();
         notify(true);
     }
 

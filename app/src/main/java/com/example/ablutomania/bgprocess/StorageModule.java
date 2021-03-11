@@ -178,12 +178,14 @@ public class StorageModule implements Runnable{
     public void onDestroy() {
         if (mFFmpeg != null) {
             try {
+                mFFmpeg.terminate();
                 mFFmpeg.waitFor();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
         mFFmpeg = null;
+        DataPipeline.getOutputFIFO().clear();
     }
 
     private int getNumChannels(int type) throws Exception {
@@ -206,8 +208,6 @@ public class StorageModule implements Runnable{
 
     @Override
     public void run() {
-        // TODO: Function is now called cyclic, but not in the specified period
-
         //check, if watch is charging
         /*if (isCharging(ctx) = true) {
             Log.i(TAG, "Charging device");
@@ -246,6 +246,7 @@ public class StorageModule implements Runnable{
 
                     /* Set buffer size */
                     ByteBuffer mBuf = ByteBuffer.allocate(SIZE_OF_FLOAT * getNumChannels(l.getType())); // set buffer size
+                    mBuf.order(ByteOrder.nativeOrder());
 
                     /* get data from data pipeline */
                     switch(curType) {
