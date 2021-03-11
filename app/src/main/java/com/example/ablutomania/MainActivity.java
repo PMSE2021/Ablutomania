@@ -94,8 +94,10 @@ public class MainActivity extends Activity /* implements RecorderService.Recorde
         findViewById(R.id.btn_exit).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(null != intentRecorder)
+                if(null != intentRecorder) {
                     stopService(intentRecorder);
+                    intentRecorder = null;
+                }
                 finish();
             }
         });
