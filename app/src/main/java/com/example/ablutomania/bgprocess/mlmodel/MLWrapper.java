@@ -19,7 +19,6 @@ import org.tensorflow.lite.Interpreter;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
@@ -28,7 +27,6 @@ public class MLWrapper extends Activity implements Runnable {
     private static final double RATE = 50.;
     private static final int ML_BUFFER_SIZE = 500;
     private Handler handler;
-    private ByteBuffer mBuf;
     private long mLastTimestamp = -1;
     private boolean bMLprocessing = false;
     private static final String MODEL_PATH = "CNN_LSTM_PRE_model_ablutomania-5-mil.tflite";
@@ -45,7 +43,7 @@ public class MLWrapper extends Activity implements Runnable {
     private FIFO<Datapoint> mDpFIFO = new FIFO<>();
     private float[][][][] mMLInputBuffer = new float[1][ML_BUFFER_SIZE][13][1];
     private float[][] mMLOutputBuffer = new float[1][3];
-    private int mMLResult = 0;
+    private int mMLResult = NO_HANDWASHING;
 
     public MLWrapper(Context context) {
         this.ctx = context;
@@ -73,7 +71,7 @@ public class MLWrapper extends Activity implements Runnable {
             mOffset = t - mLastTimestamp;
             mLastTimestamp = t;
         }
-        Log.d(TAG, String.format("running: offset = %dms", mOffset));
+        //Log.d(TAG, String.format("running: offset = %dms", mOffset));
 
         if (   (null == dpForTransformation)
             && (DataPipeline.getInputFIFO().size() > 0)) {
@@ -137,7 +135,7 @@ public class MLWrapper extends Activity implements Runnable {
         Datapoint dpTemp;
 
         do {
-            Log.i(TAG, String.format("InputFIFO size: %d", mInputFifo.size()));
+            //Log.i(TAG, String.format("InputFIFO size: %d", mInputFifo.size()));
 
             //Get SensorValues from input FIFO
             dpTemp = mInputFifo.get();
@@ -189,11 +187,11 @@ public class MLWrapper extends Activity implements Runnable {
         FIFO<Datapoint> mOutputFifo = DataPipeline.getOutputFIFO();
 
         //Convert result
-        if(mMLOutputBuffer[0][0] == 0 && mMLOutputBuffer[0][1] == 0 && mMLOutputBuffer[0][2] == 1) mMLResult = COMPULSIVE_HANDWASHING;
-        if(mMLOutputBuffer[0][0] == 0 && mMLOutputBuffer[0][1] == 1 && mMLOutputBuffer[0][2] == 0) mMLResult = NO_HANDWASHING;
-        if(mMLOutputBuffer[0][0] == 1 && mMLOutputBuffer[0][1] == 0 && mMLOutputBuffer[0][2] == 0) mMLResult = HANDWASHING;
-        Log.i(TAG, String.format("mLResult is " ));
-        Log.i(TAG, Float.toString(mMLResult));
+        if(mMLOutputBuffer[0][0] < 0.5 && mMLOutputBuffer[0][1] < 0.5 && mMLOutputBuffer[0][2] > 0.5) mMLResult = HANDWASHING;
+        if(mMLOutputBuffer[0][0] < 0.5 && mMLOutputBuffer[0][1] > 0.5 && mMLOutputBuffer[0][2] < 0.5) mMLResult = NO_HANDWASHING;
+        if(mMLOutputBuffer[0][0] > 0.5 && mMLOutputBuffer[0][1] < 0.5 && mMLOutputBuffer[0][2] < 0.5) mMLResult = COMPULSIVE_HANDWASHING;
+        Log.i(TAG, String.format("ML return %f %f %f", mMLOutputBuffer[0][0], mMLOutputBuffer[0][1], mMLOutputBuffer[0][2]));
+        Log.i(TAG, String.format("mMLResult is %d", mMLResult));
 
         if(NO_HANDWASHING != mMLResult) {
             /* Ask user if handwashing was compulsive */
@@ -213,10 +211,10 @@ public class MLWrapper extends Activity implements Runnable {
             if(dp == null)
                 continue;   //If datapoint is null, proceeed with next one
 
-            dp.setMlResult(new float[] {mMLResult});
+            dp.setMlResult(new float[] { mMLResult } );
             mOutputFifo.put(dp);
 
-            Log.i(TAG, String.format("OutputFIFO size: %d", mOutputFifo.size()));
+            //Log.i(TAG, String.format("OutputFIFO size: %d", mOutputFifo.size()));
         }
     }
 

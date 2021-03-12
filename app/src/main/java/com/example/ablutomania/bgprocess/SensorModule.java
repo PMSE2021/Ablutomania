@@ -132,7 +132,7 @@ public class SensorModule implements Runnable {
             mLastTimestamp = t;
         }
 
-        Log.d(TAG, String.format("running: offset = %dms", mOffset));
+        //Log.d(TAG, String.format("running: offset = %dms", mOffset));
 
         /*
          * monitor the output fifos of each sensor and create datapoints if each values is

@@ -98,23 +98,12 @@ public class FFMpegProcess {
 
     public OutputStream getOutputStream(int j) throws FileNotFoundException {
         OutputStream s = mStreams.get(j);
-        Log.e("BLAA", String.format("j=%d mStreams.size: %d   mFiles.size: %d", j, mStreams.size(), mFiles.size()));
-        Log.e("BLAA", String.format("s = %s", (s == null) ? "null" : "not null"));
         if (s == null) {
-            Log.e("BLAA", String.format("mFiles.get()"));
             File f = mFiles.get(j);
-            Log.e("BLAA", String.format("Filepath f = %s", f.getAbsolutePath()));
-            Log.e("BLAA", String.format("File %s", f.exists() ? "exists" : "NOT exists"));
-            Log.e("BLAA", String.format("FileOutputStream fos = new FileOutputStream(f)"));
-
             FileOutputStream fos = new FileOutputStream(f);
-
-            Log.e("BLAA", String.format("f.delete()"));
             f.delete();
-            Log.e("BLAA", String.format("mStreams.put(j, new BufferedOutputStream(fos))"));
             mStreams.put(j, new BufferedOutputStream(fos));
         }
-        Log.e("BLAA", String.format("return"));
         return mStreams.get(j);
     }
 
