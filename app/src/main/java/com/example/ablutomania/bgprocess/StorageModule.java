@@ -80,7 +80,9 @@ public class StorageModule implements Runnable{
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
             notify("FFMPEG initialisation failed");
-            SystemStatus.GetInstance().setStatusError();
+            Log.e(TAG, SystemStatus.GetInstance().getStatus().toString());
+            SystemStatus.GetInstance().setStatusError(ctx);
+            Log.e(TAG, SystemStatus.GetInstance().getStatus().toString());
         }
 
     }
@@ -220,7 +222,6 @@ public class StorageModule implements Runnable{
             notify("You ran out of free storage");
         }
 
-
         handler.postDelayed(this, (long) (1e3 / RATE));
 
         Datapoint dp;
@@ -321,6 +322,10 @@ public class StorageModule implements Runnable{
         public void onToStream(ByteBuffer buf) {
             int cnt = mCount++;
             //Log.i(TAG, String.format("onToStream is called from: %s at type: %d", mName, mType));
+
+            Log.e(TAG, SystemStatus.GetInstance().getStatus().toString());
+            SystemStatus.GetInstance().setStatusError(ctx);
+            Log.e(TAG, SystemStatus.GetInstance().getStatus().toString());
 
             mHandler.post(new Runnable() {
                 @Override

@@ -18,6 +18,9 @@ import android.util.Log;
 
 import com.example.ablutomania.CustomNotification;
 import com.example.ablutomania.R;
+
+import com.example.ablutomania.SystemStatus;
+
 import com.example.ablutomania.bgprocess.types.Datapoint;
 import com.example.ablutomania.bgprocess.types.FIFO;
 
@@ -271,6 +274,9 @@ public class SensorModule implements Runnable {
 
         mwl.release();
         notify(true);
+
+        SystemStatus.GetInstance().setStatusWarning(ctx);
+
     }
 
 
@@ -319,6 +325,8 @@ public class SensorModule implements Runnable {
                                 }
                                 default:
                                     Log.e(TAG, String.format("unknown sensor type:  %d" + sensors.get(i).getType()));
+
+                                    SystemStatus.GetInstance().setStatusError(ctx);
                             }
                         }
                         // Add complete datapoint to pipeline

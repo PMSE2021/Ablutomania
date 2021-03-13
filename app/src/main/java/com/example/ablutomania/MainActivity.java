@@ -12,6 +12,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.os.PowerManager;
 import android.provider.Settings;
 import android.view.View;
@@ -108,12 +109,9 @@ public class MainActivity extends Activity /* implements RecorderService.Recorde
         super.onDestroy();
     }
 
-
-
     /**
      * down here is only permission handling stuff
      */
-
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if (requestCode != PERMISSION_REQUEST_ID)
