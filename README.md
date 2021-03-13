@@ -13,7 +13,7 @@ The following sensors are required to run the application on Wear OS:
 All sensors are recorded and processed at 50Hz.
 
 ### Detection of OCD
- All sensor values are divided into blocks of 10s each and evaluated by a TenserFlow Lite Convolutional Neural Network (CNN). The classification of the movement is returned as the result: Everyday movement (0), Hand washing (-1) or Compulsive hand washing (1). If the result differs from everyday movements, the user is additionally asked whether the classification of the machine learning model is correct.
+ All sensor values are divided into blocks of 10s each and evaluated by a TenserFlow Lite Convolutional Neural Network with Long Short-Term Memory (CNN LSTM). The classification of the movement is returned as the result: Everyday movement (0), Hand washing (-1) or Compulsive hand washing (1). If the result differs from everyday movements, the user is additionally asked whether the classification of the machine learning model is correct.
  The sensor streams are extended by the classification and recorded.
 
 
