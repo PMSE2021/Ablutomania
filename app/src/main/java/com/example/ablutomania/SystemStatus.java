@@ -2,10 +2,9 @@ package com.example.ablutomania;
 
 import android.content.Context;
 import android.content.Intent;
+import android.util.Log;
 
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-
-import java.util.logging.LogManager;
+import com.example.ablutomania.watchface.ComplicationBroadcastReceiver;
 
 public class SystemStatus {
 
@@ -46,8 +45,16 @@ public class SystemStatus {
 
     private void setStatusAndNotify(Context context, Status status) {
         this.status = status;
-        Intent intent = new Intent(SystemStatus.STATUS_UPDATE);
+        Intent intent = new Intent(context, ComplicationBroadcastReceiver.class);
+        intent.setAction(SystemStatus.STATUS_UPDATE);
         intent.putExtra("status", status);
-        LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
+        //LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
+
+        context.sendBroadcast(intent);
+
+
+        Log.e("SystemStatus", "Send broadcast message");
+
+
     }
 }

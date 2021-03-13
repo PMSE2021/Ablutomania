@@ -7,6 +7,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.wearable.complications.ProviderUpdateRequester;
+import android.util.Log;
+
+import com.example.ablutomania.SystemStatus;
 
 public class ComplicationBroadcastReceiver extends BroadcastReceiver {
 
@@ -23,17 +26,16 @@ public class ComplicationBroadcastReceiver extends BroadcastReceiver {
 
         @Override
         public void onReceive(Context context, Intent intent) {
-            /*String action = intent.getAction();
+            Bundle extras = intent.getExtras();
+            String action = intent.getAction();
+
             if(action != null && action.equals(SystemStatus.STATUS_UPDATE)) {
                 SystemStatus.GetInstance().setStatus(SystemStatus.Status.values()[intent.getIntExtra("status", 0)]);
                 return;
+
             }
+            Log.e("ComplicationBroadcastReceiver", "receive broadcast message: " + action);
 
-             */
-
-
-
-            Bundle extras = intent.getExtras();
             ComponentName provider = extras.getParcelable(EXTRA_PROVIDER_COMPONENT);
             int complicationId = extras.getInt(EXTRA_COMPLICATION_ID);
 

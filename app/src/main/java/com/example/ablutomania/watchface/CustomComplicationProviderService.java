@@ -34,8 +34,6 @@ public class CustomComplicationProviderService extends ComplicationProviderServi
 
         String status = SystemStatus.GetInstance().getStatus().toString();
 
-        //String status = SystemStatus.STATUS_UPDATE;
-
         Log.e(TAG, SystemStatus.GetInstance().getStatus().toString());
 
         ComplicationData complicationData = null;

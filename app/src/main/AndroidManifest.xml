@@ -23,7 +23,7 @@
             android:name="com.google.android.wearable.standalone"
             android:value="true" />
 
-        <service
+        <!--service
             android:name=".MyWatchFace"
             android:label="@string/my_digital_name"
             android:permission="android.permission.BIND_WALLPAPER">
@@ -42,7 +42,7 @@
 
                 <category android:name="com.google.android.wearable.watchface.category.WATCH_FACE" />
             </intent-filter>
-        </service>
+        </service> -->
 
         <meta-data
             android:name="com.google.android.gms.version"
@@ -74,7 +74,6 @@
             </intent-filter>
         </activity>
 
-        <!-- add WearableSupportHelperActivity -->
         <activity android:name="android.support.wearable.complications.ComplicationHelperActivity"/>
         <service
             android:name=".watchface.CustomComplicationProviderService"
@@ -94,12 +93,11 @@
                 android:value="0"/>
         </service>
 
-        <receiver android:name=".watchface.ComplicationBroadcastReceiver"
-            android:enabled="true" />
-            <!--intent-filter>
+        <receiver android:name=".watchface.ComplicationBroadcastReceiver">
+            <intent-filter>
                 <action android:name="com.example.ablutomania.STATUS_UPDATE"/>
             </intent-filter>
-        </receiver-->
+        </receiver>
 
     </application>
 

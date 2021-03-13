@@ -5,7 +5,6 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 
 import androidx.annotation.NonNull;
@@ -55,7 +54,24 @@ public class MainActivity extends Activity /* implements RecorderService.Recorde
                 startActivity(intent);
             }
         }
+
+
  */
+        /*registerReceiver(
+                new BroadcastReceiver(){
+                    @Override
+                    public void onReceive(Context context, Intent intent) {
+                        String action = intent.getAction();
+                        Log.e("ComplicationBroadcastReceiver", "receive broadcast message: " + action);
+                    }
+                }, new IntentFilter(SystemStatus.STATUS_UPDATE)
+        );
+
+         */
+
+
+
+        //SystemStatus.GetInstance().setStatusError(this);
     }
 
     private void initApp() {
@@ -69,6 +85,7 @@ public class MainActivity extends Activity /* implements RecorderService.Recorde
             @Override
             public void onClick(View v) { finish(); }
         });
+
 
     }
 
