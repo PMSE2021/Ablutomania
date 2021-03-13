@@ -54,24 +54,7 @@ public class MainActivity extends Activity /* implements RecorderService.Recorde
                 startActivity(intent);
             }
         }
-
-
  */
-        /*registerReceiver(
-                new BroadcastReceiver(){
-                    @Override
-                    public void onReceive(Context context, Intent intent) {
-                        String action = intent.getAction();
-                        Log.e("ComplicationBroadcastReceiver", "receive broadcast message: " + action);
-                    }
-                }, new IntentFilter(SystemStatus.STATUS_UPDATE)
-        );
-
-         */
-
-
-
-        //SystemStatus.GetInstance().setStatusError(this);
     }
 
     private void initApp() {
@@ -85,23 +68,16 @@ public class MainActivity extends Activity /* implements RecorderService.Recorde
             @Override
             public void onClick(View v) { finish(); }
         });
-
-
     }
-
-
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
     }
 
-
-
     /**
      * down here is only permission handling stuff
      */
-
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if (requestCode != PERMISSION_REQUEST_ID)

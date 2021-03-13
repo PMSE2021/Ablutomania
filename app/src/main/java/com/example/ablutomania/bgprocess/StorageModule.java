@@ -222,15 +222,10 @@ public class StorageModule implements Runnable{
             notify("You ran out of free storage");
         }
 
-
         handler.postDelayed(this, (long) (1e3 / RATE));
 
         Datapoint dp;
         FIFO<Datapoint> mOutputFIFO = DataPipeline.getOutputFIFO();
-
-
-        SystemStatus.GetInstance().setStatusError(ctx);
-        Log.e(TAG, SystemStatus.GetInstance().getStatus().toString());
 
         //Log.i(TAG, String.format("OutputFIFO size: %d", mOutputFIFO.size()));
 
