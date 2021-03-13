@@ -298,7 +298,6 @@ public class StorageModule implements Runnable{
     private class CopyListener {
         private Handler mHandler;
         private OutputStream mOut;
-        private int mCount;
 
         private final int mIndex;
         private final String mName;
@@ -311,7 +310,6 @@ public class StorageModule implements Runnable{
          * @param name
          */
         public CopyListener(int i, Handler h, String name, int type) {
-            mCount = 0;
             mHandler = h;
             mIndex = i;
             mOut = null;
@@ -320,12 +318,11 @@ public class StorageModule implements Runnable{
         }
 
         public void onToStream(ByteBuffer buf) {
-            int cnt = mCount++;
             //Log.i(TAG, String.format("onToStream is called from: %s at type: %d", mName, mType));
 
-            Log.e(TAG, SystemStatus.GetInstance().getStatus().toString());
-            SystemStatus.GetInstance().setStatusError(ctx);
-            Log.e(TAG, SystemStatus.GetInstance().getStatus().toString());
+            //Log.e(TAG, SystemStatus.GetInstance().getStatus().toString());
+            //SystemStatus.GetInstance().setStatusError(ctx);
+            //Log.e(TAG, SystemStatus.GetInstance().getStatus().toString());
 
             mHandler.post(new Runnable() {
                 @Override

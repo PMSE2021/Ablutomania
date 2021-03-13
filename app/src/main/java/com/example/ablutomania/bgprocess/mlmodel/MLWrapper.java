@@ -29,7 +29,7 @@ public class MLWrapper extends Activity implements Runnable {
     private Handler handler;
     private long mLastTimestamp = -1;
     private boolean bMLprocessing = false;
-    private static final String MODEL_PATH = "CNN_LSTM_PRE_model_ablutomania-5-mil.tflite";
+    private static final String MODEL_PATH = "CNN_LSTM_PRE_model_ablutomania_All_cross_val2.tflite";
     private Interpreter tflite;
     private Context ctx;
     private Datapoint dpForTransformation;
@@ -41,7 +41,7 @@ public class MLWrapper extends Activity implements Runnable {
 
     /* Mutex for these variables are necessary - Just one thread should process the data*/
     private FIFO<Datapoint> mDpFIFO = new FIFO<>();
-    private float[][][][] mMLInputBuffer = new float[1][ML_BUFFER_SIZE][13][1];
+    private float[][][][] mMLInputBuffer = new float[1][1][ML_BUFFER_SIZE][13];
     private float[][] mMLOutputBuffer = new float[1][3];
     private int mMLResult = NO_HANDWASHING;
 
@@ -163,19 +163,19 @@ public class MLWrapper extends Activity implements Runnable {
 
             if(null != rotData)
                 for (int i = 0; i < (rotData.length - 1); i++, idx++)
-                    mMLInputBuffer[0][numSamples][idx][0] = rotDataTemp[i] - rotData[i];
+                    mMLInputBuffer[0][0][numSamples][idx] = rotDataTemp[i] - rotData[i];
 
             if(null != gyroData)
                 for (int i = 0; i < gyroData.length; i++, idx++)
-                    mMLInputBuffer[0][numSamples][idx][0] = gyroData[i];
+                    mMLInputBuffer[0][0][numSamples][idx] = gyroData[i];
 
             if(null != accelData)
                 for (int i = 0; i < accelData.length; i++, idx++)
-                    mMLInputBuffer[0][numSamples][idx][0] = accelData[i];
+                    mMLInputBuffer[0][0][numSamples][idx] = accelData[i];
 
             if(null != magData)
                 for (int i = 0; i < magData.length; i++, idx++)
-                    mMLInputBuffer[0][numSamples][idx][0] = magDataTemp[i] - magData[i];
+                    mMLInputBuffer[0][0][numSamples][idx] = magDataTemp[i] - magData[i];
 
             dpForTransformation = dpTemp;
             numSamples++;
