@@ -6,6 +6,9 @@ import android.util.Log;
 
 import com.example.ablutomania.watchface.ComplicationBroadcastReceiver;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class SystemStatus {
 
     private static final SystemStatus instance = new SystemStatus();
@@ -15,9 +18,32 @@ public class SystemStatus {
     private SystemStatus() {}
 
     public enum Status {
-        OK,
-        WARNING,
-        ERROR
+
+        OK(1),
+        WARNING(2),
+        ERROR(3);
+
+        private int value;
+
+        private static Map map = new HashMap<>();
+
+        private Status(int value) {
+            this.value = value;
+        }
+
+        static {
+            for (Status status : Status.values()) {
+                map.put(status.value, status);
+            }
+        }
+
+        public static Status valueOf(int status) {
+            return (Status) map.get(status);
+        }
+
+        public int getValue() {
+            return value;
+        }
     }
 
     private Status status = Status.OK;
@@ -47,14 +73,7 @@ public class SystemStatus {
         this.status = status;
         Intent intent = new Intent(context, ComplicationBroadcastReceiver.class);
         intent.setAction(SystemStatus.STATUS_UPDATE);
-        intent.putExtra("status", status);
-        //LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
-
+        intent.putExtra("status", status.getValue());
         context.sendBroadcast(intent);
-
-
-        Log.e("SystemStatus", "Send broadcast message");
-
-
     }
 }

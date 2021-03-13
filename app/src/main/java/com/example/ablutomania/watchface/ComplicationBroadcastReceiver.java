@@ -26,24 +26,19 @@ public class ComplicationBroadcastReceiver extends BroadcastReceiver {
 
         @Override
         public void onReceive(Context context, Intent intent) {
-            Bundle extras = intent.getExtras();
+
             String action = intent.getAction();
 
+            Log.e("ComplicationBroadcastReceiver", "received " + action);
+
             if(action != null && action.equals(SystemStatus.STATUS_UPDATE)) {
-                SystemStatus.GetInstance().setStatus(SystemStatus.Status.values()[intent.getIntExtra("status", 0)]);
+                SystemStatus.GetInstance().setStatus(SystemStatus.Status.valueOf(intent.getIntExtra("status", 0)));
                 return;
-
             }
-            Log.e("ComplicationBroadcastReceiver", "receive broadcast message: " + action);
 
+            Bundle extras = intent.getExtras();
             ComponentName provider = extras.getParcelable(EXTRA_PROVIDER_COMPONENT);
             int complicationId = extras.getInt(EXTRA_COMPLICATION_ID);
-
-
-            // Update data for complication.
-
-
-
 
             // Request an update for the complication that has just been tapped.
             ProviderUpdateRequester requester = new ProviderUpdateRequester(context, provider);
